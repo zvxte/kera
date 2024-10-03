@@ -1,17 +1,11 @@
 package main
 
-import (
-	"log"
-	"net/http"
-)
+import "log"
 
 func main() {
 	router := NewRouter()
-	server := &http.Server{
-		Addr:    ":5000",
-		Handler: router,
-	}
-	err := server.ListenAndServe()
+	server := NewServer(":5000", router)
+	err := server.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
