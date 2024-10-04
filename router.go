@@ -10,7 +10,7 @@ type Router struct {
 
 func NewRouter() Router {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthcheck", makeHandlerFunc(healthCheck))
+	mux.HandleFunc("/healthcheck", makeHandlerFunc(healthCheck))
 
 	router := Router{mux}
 	return router
