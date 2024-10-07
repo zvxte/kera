@@ -40,7 +40,7 @@ func makeHandlerFunc(f handlerFuncWithError) http.HandlerFunc {
 
 func healthCheck(w http.ResponseWriter, r *http.Request) (int, error) {
 	if r.Method != http.MethodGet {
-		return http.StatusMethodNotAllowed, errors.New("Method not allowed")
+		return http.StatusMethodNotAllowed, errors.New("method not allowed")
 	}
 	w.WriteHeader(http.StatusOK)
 	return http.StatusOK, nil
