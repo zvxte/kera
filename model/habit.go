@@ -7,9 +7,9 @@ type Habit struct {
 	Status          HabitStatus
 	Title           string
 	Description     string
+	TrackedWeekDays TrackedWeekDays
 	StartDate       time.Time
 	EndDate         time.Time
-	TrackedWeekDays TrackedWeekDays
 	History         HabitHistory
 }
 
