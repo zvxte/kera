@@ -9,24 +9,40 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+type DriverName uint8
+
+func (driverName DriverName) String() string {
+	switch driverName {
+	case Postgres:
+		return "pgx"
+	default:
+		return ""
+	}
+}
+
 const (
-	Postgres          = "pgx"
+	Postgres DriverName = iota
+	// Sqlite // TODO
+)
+
+const (
 	ConnectionTimeout = 5 * time.Second
 )
 
 type SqlDatabase struct {
-	DB *sql.DB
+	driverName DriverName
+	DB         *sql.DB
 }
 
-func NewSqlDatabase(driverName, dataSourceName string) (*SqlDatabase, error) {
+func NewSqlDatabase(driverName DriverName, dataSourceName string) (*SqlDatabase, error) {
 	switch driverName {
 	case Postgres:
 	// Supported
 	default:
-		return nil, fmt.Errorf("unsupported driver name %q", driverName)
+		return nil, fmt.Errorf("unsupported driver name %q", driverName.String())
 	}
 
-	db, err := sql.Open(driverName, dataSourceName)
+	db, err := sql.Open(driverName.String(), dataSourceName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
@@ -39,5 +55,5 @@ func NewSqlDatabase(driverName, dataSourceName string) (*SqlDatabase, error) {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	return &SqlDatabase{DB: db}, nil
+	return &SqlDatabase{driverName: driverName, DB: db}, nil
 }
