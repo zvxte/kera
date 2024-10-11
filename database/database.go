@@ -13,7 +13,7 @@ type DriverName uint8
 
 func (driverName DriverName) String() string {
 	switch driverName {
-	case Postgres:
+	case PostgresDriverName:
 		return "pgx"
 	default:
 		return ""
@@ -21,7 +21,8 @@ func (driverName DriverName) String() string {
 }
 
 const (
-	Postgres DriverName = iota
+	InvalidDriverName DriverName = iota
+	PostgresDriverName
 	// Sqlite // TODO
 )
 
@@ -36,7 +37,7 @@ type SqlDatabase struct {
 
 func NewSqlDatabase(driverName DriverName, dataSourceName string) (*SqlDatabase, error) {
 	switch driverName {
-	case Postgres:
+	case PostgresDriverName:
 	// Supported
 	default:
 		return nil, fmt.Errorf("unsupported driver name %q", driverName.String())
