@@ -23,7 +23,6 @@ func (driverName DriverName) String() string {
 const (
 	InvalidDriverName DriverName = iota
 	PostgresDriverName
-	// Sqlite // TODO
 )
 
 const (
