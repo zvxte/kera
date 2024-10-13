@@ -6,5 +6,5 @@ CREATE TABLE IF NOT EXISTS habits(
     description VARCHAR(256) NOT NULL,
     tracked_week_days SMALLINT NOT NULL,
     start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
+    end_date DATE NOT NULL
 );

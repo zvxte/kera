@@ -1,4 +1,4 @@
 CREATE TABLE IF NOT EXISTS habit_statuses(
     id SMALLINT NOT NULL PRIMARY KEY,
-    name VARCHAR(16),
+    name VARCHAR(16)
 );

@@ -5,5 +5,5 @@ CREATE TABLE IF NOT EXISTS users(
     display_name VARCHAR(16) NOT NULL,
     password TEXT NOT NULL,
     location TEXT NOT NULL,
-    creation_date DATE NOT NULL,
+    creation_date DATE NOT NULL
 );
