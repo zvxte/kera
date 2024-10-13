@@ -5,13 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-const (
-	PostgresDriverName = "pgx"
-)
+const PostgresDriverName = "pgx"
 
 type SqlDatabase struct {
 	DB *sql.DB
@@ -41,6 +40,7 @@ func NewSqlDatabase(ctx context.Context, driverName string, dataSourceName strin
 func (sqlDatabase *SqlDatabase) Setup(ctx context.Context) error {
 	migrationsDirPath := "migrations"
 
+	// Entries returned from os.ReadDir() function are already sorted by file name.
 	entries, err := os.ReadDir(migrationsDirPath)
 	if err != nil {
 		return fmt.Errorf("failed to read migrations directory: %w", err)
@@ -64,6 +64,9 @@ func (sqlDatabase *SqlDatabase) Setup(ctx context.Context) error {
 	`
 	row := sqlDatabase.DB.QueryRowContext(ctx, query)
 
+	// Migrations table exists if Scan() method does not return an error.
+	// In this case we want to exclude migrations with lower or equal version.
+
 	var databaseMigrationVersion uint16
 	err = row.Scan(&databaseMigrationVersion)
 	if err == nil {
@@ -82,16 +85,19 @@ func (sqlDatabase *SqlDatabase) Setup(ctx context.Context) error {
 		}
 	}
 
+	// Now we can execute remaining migrations in a single transaction.
+
 	tx, err := sqlDatabase.DB.BeginTx(ctx, nil)
 	defer tx.Rollback()
 
 	for _, migration := range migrations {
-		content, err := os.ReadFile(fmt.Sprint(migrationsDirPath, "/", migration.fileName))
+		migrationFilePath := filepath.Join(migrationsDirPath, migration.fileName)
+		content, err := os.ReadFile(migrationFilePath)
 		if err != nil {
 			return fmt.Errorf("failed to read %q: %w", migration.fileName, err)
 		}
-		query := string(content)
 
+		query := string(content)
 		_, err = tx.ExecContext(ctx, query)
 		if err != nil {
 			return fmt.Errorf("failed to execute %q: %w", migration.fileName, err)
@@ -111,7 +117,7 @@ func (sqlDatabase *SqlDatabase) Setup(ctx context.Context) error {
 
 	err = tx.Commit()
 	if err != nil {
-		return fmt.Errorf("failed to commit: %w", err)
+		return fmt.Errorf("failed to commit migration transaction: %w", err)
 	}
 
 	return nil
