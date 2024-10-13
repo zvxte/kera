@@ -16,6 +16,9 @@ type SqlDatabase struct {
 	DB *sql.DB
 }
 
+// NewSqlDatabase returns a pointer to new SqlDatabase instance.
+// This function checks if supported driver name is provided,
+// and pings the database to validate given data source name.
 func NewSqlDatabase(ctx context.Context, driverName string, dataSourceName string) (*SqlDatabase, error) {
 	switch driverName {
 	case PostgresDriverName:
@@ -37,6 +40,7 @@ func NewSqlDatabase(ctx context.Context, driverName string, dataSourceName strin
 	return &SqlDatabase{DB: db}, nil
 }
 
+// Setup sets up database migrations.
 func (sqlDatabase *SqlDatabase) Setup(ctx context.Context) error {
 	migrationsDirPath := "migrations"
 
