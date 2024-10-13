@@ -1,20 +1,61 @@
 package database
 
 import (
+	"context"
+	"os"
 	"testing"
+	"time"
 )
 
-func TestNewSqlDatabase(t *testing.T) {
-	invalid := ""
-	ErrorExpectedMessage := "expected an error, but got nil"
+func TestNewSqlDatabaseInvalid(t *testing.T) {
+	empty := ""
+	expectedErrorMessage := "Expected an error, but got nil"
 
-	_, err := NewSqlDatabase(InvalidDriverName, invalid)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := NewSqlDatabase(ctx, empty, empty)
 	if err == nil {
-		t.Error(ErrorExpectedMessage)
+		t.Error(expectedErrorMessage)
 	}
 
-	_, err = NewSqlDatabase(PostgresDriverName, invalid)
+	_, err = NewSqlDatabase(ctx, PostgresDriverName, empty)
 	if err == nil {
-		t.Error(ErrorExpectedMessage)
+		t.Error(expectedErrorMessage)
+	}
+}
+
+func TestNewSqlDatabaseValid(t *testing.T) {
+	dataSourceName := os.Getenv("DSN")
+	if dataSourceName == "" {
+		t.Skip("Skipping: DSN is not set")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := NewSqlDatabase(ctx, PostgresDriverName, dataSourceName)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestSqlDatabaseSetup(t *testing.T) {
+	dataSourceName := os.Getenv("DSN")
+	if dataSourceName == "" {
+		t.Skip("Skipping: DSN is not set")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	sqlDatabase, err := NewSqlDatabase(ctx, PostgresDriverName, dataSourceName)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = sqlDatabase.Setup(ctx)
+	if err != nil {
+		t.Error(err)
 	}
 }
