@@ -39,3 +39,10 @@ func TestNewMigrationValid(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestGetMigrations(t *testing.T) {
+	_, err := getMigrations("migrations")
+	if err != nil {
+		t.Error(err)
+	}
+}
