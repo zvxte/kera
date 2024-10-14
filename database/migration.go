@@ -9,11 +9,12 @@ import (
 )
 
 type migration struct {
-	version  uint16
-	fileName string
+	version uint16
+	query   string
 }
 
-func newMigration(fileName string) (migration, error) {
+func newMigration(filePath string) (migration, error) {
+	fileName := filepath.Base(filePath)
 	if len(fileName) < 3 || filepath.Ext(strings.ToLower(fileName)) != ".sql" {
 		return migration{}, fmt.Errorf("invalid migration file name: %q", fileName)
 	}
@@ -23,7 +24,12 @@ func newMigration(fileName string) (migration, error) {
 		return migration{}, fmt.Errorf("failed to parse migration version: %q", fileName)
 	}
 
-	return migration{version: uint16(version), fileName: fileName}, nil
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return migration{}, fmt.Errorf("failed to read %q: %w", fileName, err)
+	}
+
+	return migration{version: uint16(version), query: string(content)}, nil
 }
 
 // getMigrations returns all migrations found in a given directory path sorted by file name.
@@ -38,11 +44,15 @@ func getMigrations(dirPath string) ([]migration, error) {
 		if entry.IsDir() {
 			continue
 		}
-		migration, err := newMigration(entry.Name())
+
+		entryPath := filepath.Join(dirPath, entry.Name())
+		migration, err := newMigration(entryPath)
 		if err != nil {
 			return nil, err
 		}
+
 		migrations = append(migrations, migration)
 	}
+
 	return migrations, nil
 }

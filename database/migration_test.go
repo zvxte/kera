@@ -1,6 +1,7 @@
 package database
 
 import (
+	"path/filepath"
 	"testing"
 )
 
@@ -12,36 +13,33 @@ func TestNewMigrationInvalid(t *testing.T) {
 		t.Error(expectedErrorMessage)
 	}
 
-	_, err = newMigration("00.sql")
+	_, err = newMigration(filepath.Join("migrations", "00.sql"))
 	if err == nil {
 		t.Error(expectedErrorMessage)
 	}
 
-	_, err = newMigration("000.txt")
+	_, err = newMigration(filepath.Join("migrations", "000.txt"))
 	if err == nil {
 		t.Error(expectedErrorMessage)
 	}
 
-	_, err = newMigration("000")
+	_, err = newMigration(filepath.Join("migrations", "000"))
 	if err == nil {
 		t.Error(expectedErrorMessage)
 	}
 }
 
 func TestNewMigrationValid(t *testing.T) {
-	_, err := newMigration("000.sql")
-	if err != nil {
-		t.Error(err)
-	}
-
-	_, err = newMigration("999_migration.sql")
+	validFilePath := filepath.Join("migrations", "000_create_migrations.sql")
+	_, err := newMigration(validFilePath)
 	if err != nil {
 		t.Error(err)
 	}
 }
 
 func TestGetMigrations(t *testing.T) {
-	_, err := getMigrations("migrations")
+	migrationsDirPath := "migrations"
+	_, err := getMigrations(migrationsDirPath)
 	if err != nil {
 		t.Error(err)
 	}

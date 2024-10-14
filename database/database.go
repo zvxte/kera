@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -76,16 +74,9 @@ func (sqlDatabase *SqlDatabase) Setup(ctx context.Context) error {
 	defer tx.Rollback()
 
 	for _, migration := range migrations {
-		migrationFilePath := filepath.Join(migrationsDirPath, migration.fileName)
-		content, err := os.ReadFile(migrationFilePath)
+		_, err = tx.ExecContext(ctx, migration.query)
 		if err != nil {
-			return fmt.Errorf("failed to read %q: %w", migration.fileName, err)
-		}
-
-		query := string(content)
-		_, err = tx.ExecContext(ctx, query)
-		if err != nil {
-			return fmt.Errorf("failed to execute %q: %w", migration.fileName, err)
+			return fmt.Errorf("failed to execute %q: %w", migration.query, err)
 		}
 	}
 
