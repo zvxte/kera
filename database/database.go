@@ -43,40 +43,21 @@ func NewSqlDatabase(ctx context.Context, driverName string, dataSourceName strin
 // Setup sets up database migrations.
 func (sqlDatabase *SqlDatabase) Setup(ctx context.Context) error {
 	migrationsDirPath := "migrations"
-
-	// Entries returned from os.ReadDir() function are already sorted by file name.
-	entries, err := os.ReadDir(migrationsDirPath)
+	migrations, err := getMigrations(migrationsDirPath)
 	if err != nil {
-		return fmt.Errorf("failed to read migrations directory: %w", err)
+		return err
 	}
 
-	migrations := make([]migration, 0, len(entries))
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		migration, err := newMigration(entry.Name())
-		if err != nil {
-			return err
-		}
-		migrations = append(migrations, migration)
-	}
-	latestMigrationVersion := migrations[len(migrations)-1].version
-
-	query := `
-		SELECT version FROM migrations;
-	`
-	row := sqlDatabase.DB.QueryRowContext(ctx, query)
-
-	// Migrations table exists if Scan() method does not return an error.
+	// Migrations table exists if SqlDatabase.getDatabaseMigrationVersion() method does not return an error.
 	// In this case we want to exclude migrations with lower or equal version.
 
-	var databaseMigrationVersion uint16
-	err = row.Scan(&databaseMigrationVersion)
+	latestMigrationVersion := migrations[len(migrations)-1].version
+	databaseMigrationVersion, err := sqlDatabase.getDatabaseMigrationVersion(ctx)
 	if err == nil {
 		if databaseMigrationVersion == latestMigrationVersion {
 			return nil
 		}
+
 		if databaseMigrationVersion > latestMigrationVersion {
 			return fmt.Errorf("database migration version %d is greater than latest migration version %d", databaseMigrationVersion, latestMigrationVersion)
 		}
@@ -108,7 +89,7 @@ func (sqlDatabase *SqlDatabase) Setup(ctx context.Context) error {
 		}
 	}
 
-	query = `
+	query := `
 		INSERT INTO migrations (id, version)
 		VALUES (0, $1)
 		ON CONFLICT (id)
@@ -121,8 +102,22 @@ func (sqlDatabase *SqlDatabase) Setup(ctx context.Context) error {
 
 	err = tx.Commit()
 	if err != nil {
-		return fmt.Errorf("failed to commit migration transaction: %w", err)
+		return fmt.Errorf("failed to commit migrations transaction: %w", err)
 	}
 
 	return nil
+}
+
+func (sqlDatabase *SqlDatabase) getDatabaseMigrationVersion(ctx context.Context) (uint16, error) {
+	query := `
+		SELECT version FROM migrations;
+	`
+	row := sqlDatabase.DB.QueryRowContext(ctx, query)
+
+	var databaseMigrationVersion uint16
+	err := row.Scan(&databaseMigrationVersion)
+	if err != nil {
+		return databaseMigrationVersion, fmt.Errorf("failed to get migrations version: %w", err)
+	}
+	return databaseMigrationVersion, nil
 }
