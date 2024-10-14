@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -23,4 +24,25 @@ func newMigration(fileName string) (migration, error) {
 	}
 
 	return migration{version: uint16(version), fileName: fileName}, nil
+}
+
+// getMigrations returns all migrations found in a given directory path sorted by file name.
+func getMigrations(dirPath string) ([]migration, error) {
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read migrations directory: %w", err)
+	}
+
+	migrations := make([]migration, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		migration, err := newMigration(entry.Name())
+		if err != nil {
+			return nil, err
+		}
+		migrations = append(migrations, migration)
+	}
+	return migrations, nil
 }
