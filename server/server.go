@@ -1,8 +1,10 @@
 package server
 
+import "net/http"
+
 type Server struct {
-	authRouter     Router
-	usersRouter    Router
-	sessionsRouter Router
-	habitsRouter   Router
+	authMux     *http.ServeMux
+	usersMux    *http.ServeMux
+	sessionsMux *http.ServeMux
+	habitsMux   *http.ServeMux
 }
