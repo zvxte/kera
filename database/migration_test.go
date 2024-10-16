@@ -38,8 +38,7 @@ func TestNewMigrationValid(t *testing.T) {
 }
 
 func TestGetMigrations(t *testing.T) {
-	migrationsDirPath := "migrations"
-	_, err := getMigrations(migrationsDirPath)
+	_, err := getMigrations()
 	if err != nil {
 		t.Error(err)
 	}

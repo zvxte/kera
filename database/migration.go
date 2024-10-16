@@ -2,11 +2,12 @@ package database
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 )
+
+const migrationsAssetsDir = "migrations"
 
 type migration struct {
 	version uint16
@@ -24,7 +25,7 @@ func newMigration(filePath string) (migration, error) {
 		return migration{}, fmt.Errorf("failed to parse migration version: %q", fileName)
 	}
 
-	content, err := os.ReadFile(filePath)
+	content, err := assets.ReadFile(filePath)
 	if err != nil {
 		return migration{}, fmt.Errorf("failed to read %q: %w", fileName, err)
 	}
@@ -33,8 +34,8 @@ func newMigration(filePath string) (migration, error) {
 }
 
 // getMigrations returns all migrations found in a given directory path sorted by file name.
-func getMigrations(dirPath string) ([]migration, error) {
-	entries, err := os.ReadDir(dirPath)
+func getMigrations() ([]migration, error) {
+	entries, err := assets.ReadDir(migrationsAssetsDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read migrations directory: %w", err)
 	}
@@ -45,7 +46,7 @@ func getMigrations(dirPath string) ([]migration, error) {
 			continue
 		}
 
-		entryPath := filepath.Join(dirPath, entry.Name())
+		entryPath := filepath.Join(migrationsAssetsDir, entry.Name())
 		migration, err := newMigration(entryPath)
 		if err != nil {
 			return nil, err
