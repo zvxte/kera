@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -56,6 +57,12 @@ func TestSqlDatabaseSetup(t *testing.T) {
 
 	err = sqlDatabase.Setup(ctx)
 	if err != nil {
+		t.Error(err)
+	}
+
+	var nilSqlDatabase *SqlDatabase
+	err = nilSqlDatabase.Setup(ctx)
+	if !errors.Is(err, NilPointerReceiverError) {
 		t.Error(err)
 	}
 }

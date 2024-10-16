@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -10,8 +11,10 @@ import (
 
 const PostgresDriverName = "pgx"
 
+var NilPointerReceiverError = errors.New("method called on nil pointer receiver")
+
 type SqlDatabase struct {
-	DB *sql.DB
+	db *sql.DB
 }
 
 // NewSqlDatabase returns a pointer to new SqlDatabase instance.
@@ -35,11 +38,15 @@ func NewSqlDatabase(ctx context.Context, driverName string, dataSourceName strin
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	return &SqlDatabase{DB: db}, nil
+	return &SqlDatabase{db: db}, nil
 }
 
 // Setup sets up database migrations.
-func (sqlDatabase *SqlDatabase) Setup(ctx context.Context) error {
+func (sd *SqlDatabase) Setup(ctx context.Context) error {
+	if sd == nil {
+		return NilPointerReceiverError
+	}
+
 	migrationsDirPath := "migrations"
 	migrations, err := getMigrations(migrationsDirPath)
 	if err != nil {
@@ -50,7 +57,7 @@ func (sqlDatabase *SqlDatabase) Setup(ctx context.Context) error {
 	// In this case we want to exclude migrations with lower or equal version.
 
 	latestMigrationVersion := migrations[len(migrations)-1].version
-	databaseMigrationVersion, err := sqlDatabase.getDatabaseMigrationVersion(ctx)
+	databaseMigrationVersion, err := sd.getDatabaseMigrationVersion(ctx)
 	if err == nil {
 		if databaseMigrationVersion == latestMigrationVersion {
 			return nil
@@ -70,7 +77,7 @@ func (sqlDatabase *SqlDatabase) Setup(ctx context.Context) error {
 
 	// Now we can execute remaining migrations in a single transaction.
 
-	tx, err := sqlDatabase.DB.BeginTx(ctx, nil)
+	tx, err := sd.db.BeginTx(ctx, nil)
 	defer tx.Rollback()
 
 	for _, migration := range migrations {
@@ -99,11 +106,15 @@ func (sqlDatabase *SqlDatabase) Setup(ctx context.Context) error {
 	return nil
 }
 
-func (sqlDatabase *SqlDatabase) getDatabaseMigrationVersion(ctx context.Context) (uint16, error) {
+func (sd *SqlDatabase) getDatabaseMigrationVersion(ctx context.Context) (uint16, error) {
+	if sd == nil {
+		return 0, NilPointerReceiverError
+	}
+
 	query := `
 		SELECT version FROM migrations;
 	`
-	row := sqlDatabase.DB.QueryRowContext(ctx, query)
+	row := sd.db.QueryRowContext(ctx, query)
 
 	var databaseMigrationVersion uint16
 	err := row.Scan(&databaseMigrationVersion)
