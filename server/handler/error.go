@@ -1,11 +1,12 @@
 package handler
 
 type handlerError struct {
-	Message string `json:"message"`
+	StatusCode int    `json:"status_code"`
+	Message    string `json:"message"`
 }
 
-func newHandlerError(message string) handlerError {
-	return handlerError{Message: message}
+func newHandlerError(statusCode int, message string) handlerError {
+	return handlerError{StatusCode: statusCode, Message: message}
 }
 
 func (handlerError handlerError) Error() string {
