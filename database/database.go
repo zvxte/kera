@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -11,10 +10,8 @@ import (
 
 const PostgresDriverName = "pgx"
 
-var NilPointerReceiverError = errors.New("method called on nil pointer receiver")
-
 type SqlDatabase struct {
-	db *sql.DB
+	DB *sql.DB
 }
 
 // NewSqlDatabase returns a pointer to new SqlDatabase instance.
@@ -38,17 +35,12 @@ func NewSqlDatabase(ctx context.Context, driverName string, dataSourceName strin
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	return &SqlDatabase{db: db}, nil
+	return &SqlDatabase{DB: db}, nil
 }
 
 // Setup sets up database migrations.
 func (sd *SqlDatabase) Setup(ctx context.Context) error {
-	if sd == nil {
-		return NilPointerReceiverError
-	}
-
-	migrationsDirPath := "migrations"
-	migrations, err := getMigrations(migrationsDirPath)
+	migrations, err := getMigrations()
 	if err != nil {
 		return err
 	}
@@ -77,7 +69,7 @@ func (sd *SqlDatabase) Setup(ctx context.Context) error {
 
 	// Now we can execute remaining migrations in a single transaction.
 
-	tx, err := sd.db.BeginTx(ctx, nil)
+	tx, err := sd.DB.BeginTx(ctx, nil)
 	defer tx.Rollback()
 
 	for _, migration := range migrations {
@@ -107,14 +99,10 @@ func (sd *SqlDatabase) Setup(ctx context.Context) error {
 }
 
 func (sd *SqlDatabase) getDatabaseMigrationVersion(ctx context.Context) (uint16, error) {
-	if sd == nil {
-		return 0, NilPointerReceiverError
-	}
-
 	query := `
 		SELECT version FROM migrations;
 	`
-	row := sd.db.QueryRowContext(ctx, query)
+	row := sd.DB.QueryRowContext(ctx, query)
 
 	var databaseMigrationVersion uint16
 	err := row.Scan(&databaseMigrationVersion)
