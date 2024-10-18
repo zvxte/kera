@@ -1,9 +1,6 @@
 package model
 
-import (
-	"fmt"
-	"testing"
-)
+import "testing"
 
 func TestIsUsernameValid(t *testing.T) {
 	validUsernames := []string{
@@ -11,7 +8,7 @@ func TestIsUsernameValid(t *testing.T) {
 	}
 	for _, username := range validUsernames {
 		if !IsUsernameValid(username) {
-			t.Error(fmt.Sprintf("Username should be valid: %q", username))
+			t.Errorf("username should be valid: %q", username)
 		}
 	}
 
@@ -20,7 +17,7 @@ func TestIsUsernameValid(t *testing.T) {
 	}
 	for _, username := range invalidUsernames {
 		if IsUsernameValid(username) {
-			t.Error(fmt.Sprintf("Username should not be valid: %q", username))
+			t.Errorf("username should not be valid: %q", username)
 		}
 	}
 }
