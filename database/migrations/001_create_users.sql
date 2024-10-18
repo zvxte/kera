@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS users(
     username VARCHAR(16) NOT NULL,
     username_lower VARCHAR(16) NOT NULL,
     display_name VARCHAR(16) NOT NULL,
-    password TEXT NOT NULL,
+    hashed_password TEXT NOT NULL,
     location TEXT NOT NULL,
     creation_date DATE NOT NULL
 );
