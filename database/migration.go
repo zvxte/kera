@@ -33,7 +33,7 @@ func newMigration(filePath string) (migration, error) {
 	return migration{version: uint16(version), query: string(content)}, nil
 }
 
-// getMigrations returns all migrations found in a given directory path sorted by file name.
+// getMigrations returns all migrations found in the embedded migrations directory sorted by file name.
 func getMigrations() ([]migration, error) {
 	entries, err := assets.ReadDir(migrationsAssetsDir)
 	if err != nil {
