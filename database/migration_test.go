@@ -5,41 +5,33 @@ import (
 	"testing"
 )
 
-func TestNewMigrationInvalid(t *testing.T) {
-	expectedErrorMessage := "Expected an error, but got nil"
+func TestNewMigration(t *testing.T) {
+	expectedErrorMessage := "expected an error, but got nil"
 
-	_, err := newMigration("")
-	if err == nil {
-		t.Error(expectedErrorMessage)
-	}
-
-	_, err = newMigration(filepath.Join("migrations", "00.sql"))
-	if err == nil {
-		t.Error(expectedErrorMessage)
-	}
-
-	_, err = newMigration(filepath.Join("migrations", "000.txt"))
-	if err == nil {
-		t.Error(expectedErrorMessage)
-	}
-
-	_, err = newMigration(filepath.Join("migrations", "000"))
-	if err == nil {
-		t.Error(expectedErrorMessage)
-	}
-}
-
-func TestNewMigrationValid(t *testing.T) {
 	validFilePath := filepath.Join("migrations", "000_create_migrations.sql")
-	_, err := newMigration(validFilePath)
-	if err != nil {
+	if _, err := newMigration(validFilePath); err != nil {
 		t.Error(err)
+	}
+
+	if _, err := newMigration(""); err == nil {
+		t.Error(expectedErrorMessage)
+	}
+
+	if _, err := newMigration(filepath.Join("migrations", "00.sql")); err == nil {
+		t.Error(expectedErrorMessage)
+	}
+
+	if _, err := newMigration(filepath.Join("migrations", "000.txt")); err == nil {
+		t.Error(expectedErrorMessage)
+	}
+
+	if _, err := newMigration(filepath.Join("migrations", "000")); err == nil {
+		t.Error(expectedErrorMessage)
 	}
 }
 
 func TestGetMigrations(t *testing.T) {
-	_, err := getMigrations()
-	if err != nil {
+	if _, err := getMigrations(); err != nil {
 		t.Error(err)
 	}
 }
