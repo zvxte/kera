@@ -3,6 +3,8 @@ package model
 import (
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 )
 
 const (
@@ -38,7 +40,35 @@ func IsUsernameValid(username string) bool {
 		}
 	}
 
-	if len(strings.Trim(username, "_")) == 0 {
+	if len(strings.ReplaceAll(username, "_", "")) < usernameMinChars {
+		return false
+	}
+
+	return true
+}
+
+func IsDisplayNameValid(displayName string) bool {
+	// Prevents from counting runes on a large string
+	if len(displayName) > displayNameMaxChars*4 {
+		return false
+	}
+
+	length := utf8.RuneCountInString(displayName)
+	if length < displayNameMinChars || length > displayNameMaxChars {
+		return false
+	}
+
+	for _, c := range displayName {
+		if unicode.IsControl(c) || (unicode.IsSpace(c) && c != ' ') {
+			return false
+		}
+	}
+
+	if utf8.RuneCountInString(strings.ReplaceAll(displayName, " ", "")) < usernameMinChars {
+		return false
+	}
+
+	if strings.HasPrefix(displayName, " ") || strings.HasSuffix(displayName, " ") {
 		return false
 	}
 
