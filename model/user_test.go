@@ -86,3 +86,13 @@ func TestIsHashedPasswordValid(t *testing.T) {
 		}
 	}
 }
+
+func TestIsLocationValid(t *testing.T) {
+	if location := "UTC"; !IsLocationValid(location) {
+		t.Errorf("location should be valid: %q", location)
+	}
+
+	if location := "Invalid"; IsLocationValid(location) {
+		t.Errorf("location should not be valid: %q", location)
+	}
+}

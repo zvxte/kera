@@ -102,3 +102,15 @@ func IsHashedPasswordValid(hashedPassword string) bool {
 
 	return true
 }
+
+func IsLocationValid(location string) bool {
+	if len(location) > timezoneNameMaxChars {
+		return false
+	}
+
+	if _, err := time.LoadLocation(location); err != nil {
+		return false
+	}
+
+	return true
+}
