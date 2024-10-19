@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"strings"
 	"time"
 	"unicode"
@@ -19,13 +20,48 @@ const (
 	timezoneNameMaxChars   = 64
 )
 
+var (
+	errInvalidUsername       = errors.New("invalid username")
+	errInvalidDisplayName    = errors.New("invalid display name")
+	errInvalidHashedPassword = errors.New("invalid hashed password")
+	errInvalidTimezoneName   = errors.New("invalid timezone name")
+)
+
 type User struct {
 	ID             UUID
 	Username       string
 	DisplayName    string
 	HashedPassword string
-	Location       time.Location
+	Location       *time.Location
 	CreationDate   time.Time
+}
+
+func NewUser(
+	id UUID,
+	username, displayName, hashedPassword, timezoneName string,
+	creationDate time.Time,
+) (User, error) {
+	if !isUsernameValid(username) {
+		return User{}, errInvalidUsername
+	}
+	if !isDisplayNameValid(displayName) {
+		return User{}, errInvalidDisplayName
+	}
+	if !isHashedPasswordValid(hashedPassword) {
+		return User{}, errInvalidHashedPassword
+	}
+	if !isTimezoneNameValid(timezoneName) {
+		return User{}, errInvalidTimezoneName
+	}
+	location, _ := time.LoadLocation(timezoneName)
+	return User{
+		ID:             id,
+		Username:       username,
+		DisplayName:    displayName,
+		HashedPassword: hashedPassword,
+		Location:       location,
+		CreationDate:   creationDate,
+	}, nil
 }
 
 func isUsernameValid(username string) bool {
@@ -103,12 +139,12 @@ func isHashedPasswordValid(hashedPassword string) bool {
 	return true
 }
 
-func isLocationValid(location string) bool {
-	if len(location) > timezoneNameMaxChars {
+func isTimezoneNameValid(timezoneName string) bool {
+	if len(timezoneName) > timezoneNameMaxChars {
 		return false
 	}
 
-	if _, err := time.LoadLocation(location); err != nil {
+	if _, err := time.LoadLocation(timezoneName); err != nil {
 		return false
 	}
 

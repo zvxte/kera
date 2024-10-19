@@ -87,12 +87,12 @@ func TestIsHashedPasswordValid(t *testing.T) {
 	}
 }
 
-func TestIsLocationValid(t *testing.T) {
-	if location := "UTC"; !isLocationValid(location) {
-		t.Errorf("location should be valid: %q", location)
+func TestIsTimezoneNameValid(t *testing.T) {
+	if timezoneName := "UTC"; !isTimezoneNameValid(timezoneName) {
+		t.Errorf("timezone name should be valid: %q", timezoneName)
 	}
 
-	if location := "Invalid"; isLocationValid(location) {
-		t.Errorf("location should not be valid: %q", location)
+	if timezoneName := "Invalid"; isTimezoneNameValid(timezoneName) {
+		t.Errorf("timezone name should not be valid: %q", timezoneName)
 	}
 }
