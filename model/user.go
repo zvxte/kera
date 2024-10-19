@@ -28,7 +28,7 @@ type User struct {
 	CreationDate   time.Time
 }
 
-func IsUsernameValid(username string) bool {
+func isUsernameValid(username string) bool {
 	length := len(username)
 	if length < usernameMinChars || length > usernameMaxChars {
 		return false
@@ -47,7 +47,7 @@ func IsUsernameValid(username string) bool {
 	return true
 }
 
-func IsDisplayNameValid(displayName string) bool {
+func isDisplayNameValid(displayName string) bool {
 	// Prevents from counting runes on a large string
 	if len(displayName) > displayNameMaxChars*4 {
 		return false
@@ -89,7 +89,7 @@ func IsPlainPasswordValid(plainPassword string) bool {
 	return true
 }
 
-func IsHashedPasswordValid(hashedPassword string) bool {
+func isHashedPasswordValid(hashedPassword string) bool {
 	// Prevents from counting runes on a large string
 	if len(hashedPassword) > hashedPasswordMaxChars*4 {
 		return false
@@ -103,7 +103,7 @@ func IsHashedPasswordValid(hashedPassword string) bool {
 	return true
 }
 
-func IsLocationValid(location string) bool {
+func isLocationValid(location string) bool {
 	if len(location) > timezoneNameMaxChars {
 		return false
 	}

@@ -10,7 +10,7 @@ func TestIsUsernameValid(t *testing.T) {
 		"AbcD", "1234", "abcd", "ab_cd", "_1234", "AB__CD", "ABCDabcd12345678",
 	}
 	for _, username := range validUsernames {
-		if !IsUsernameValid(username) {
+		if !isUsernameValid(username) {
 			t.Errorf("username should be valid: %q", username)
 		}
 	}
@@ -19,7 +19,7 @@ func TestIsUsernameValid(t *testing.T) {
 		"A", "Ab", "Abc", "123", "_abc_", "____", "ABCDabcd123456789", "abcd.", "abcdπ", "ab cd",
 	}
 	for _, username := range invalidUsernames {
-		if IsUsernameValid(username) {
+		if isUsernameValid(username) {
 			t.Errorf("username should not be valid: %q", username)
 		}
 	}
@@ -30,7 +30,7 @@ func TestIsDisplayNameValid(t *testing.T) {
 		"AbcD", "1234", "AB CD", "ABCDabcd12345678", "!@#$",
 	}
 	for _, displayName := range validDisplayNames {
-		if !IsDisplayNameValid(displayName) {
+		if !isDisplayNameValid(displayName) {
 			t.Errorf("display name should be valid: %q", displayName)
 		}
 	}
@@ -39,7 +39,7 @@ func TestIsDisplayNameValid(t *testing.T) {
 		"A", "Abc", "!@#", "ABCDabcd123456789", "πππ", "    ", "ab  c", " abcd",
 	}
 	for _, displayName := range invalidDisplayNames {
-		if IsDisplayNameValid(displayName) {
+		if isDisplayNameValid(displayName) {
 			t.Errorf("display name should not be valid: %q", displayName)
 		}
 	}
@@ -72,7 +72,7 @@ func TestIsHashedPasswordValid(t *testing.T) {
 		strings.Repeat("1", hashedPasswordMaxChars),
 	}
 	for _, hashedPassword := range validHashedPasswords {
-		if !IsHashedPasswordValid(hashedPassword) {
+		if !isHashedPasswordValid(hashedPassword) {
 			t.Errorf("hashed password should be valid: %q", hashedPassword)
 		}
 	}
@@ -81,18 +81,18 @@ func TestIsHashedPasswordValid(t *testing.T) {
 		"1", "1234567", strings.Repeat("1", hashedPasswordMaxChars+1),
 	}
 	for _, hashedPassword := range invalidHashedPasswords {
-		if IsHashedPasswordValid(hashedPassword) {
+		if isHashedPasswordValid(hashedPassword) {
 			t.Errorf("hashed password should not be valid: %q", hashedPassword)
 		}
 	}
 }
 
 func TestIsLocationValid(t *testing.T) {
-	if location := "UTC"; !IsLocationValid(location) {
+	if location := "UTC"; !isLocationValid(location) {
 		t.Errorf("location should be valid: %q", location)
 	}
 
-	if location := "Invalid"; IsLocationValid(location) {
+	if location := "Invalid"; isLocationValid(location) {
 		t.Errorf("location should not be valid: %q", location)
 	}
 }
