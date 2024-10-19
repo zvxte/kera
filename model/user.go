@@ -74,3 +74,17 @@ func IsDisplayNameValid(displayName string) bool {
 
 	return true
 }
+
+func IsPlainPasswordValid(plainPassword string) bool {
+	// Prevents from counting runes on a large string
+	if len(plainPassword) > plainPasswordMaxChars*4 {
+		return false
+	}
+
+	length := utf8.RuneCountInString(plainPassword)
+	if length < plainPasswordMinChars || length > plainPasswordMaxChars {
+		return false
+	}
+
+	return true
+}
