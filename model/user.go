@@ -88,3 +88,17 @@ func IsPlainPasswordValid(plainPassword string) bool {
 
 	return true
 }
+
+func IsHashedPasswordValid(hashedPassword string) bool {
+	// Prevents from counting runes on a large string
+	if len(hashedPassword) > hashedPasswordMaxChars*4 {
+		return false
+	}
+
+	length := utf8.RuneCountInString(hashedPassword)
+	if length < hashedPasswordMinChars || length > hashedPasswordMaxChars {
+		return false
+	}
+
+	return true
+}

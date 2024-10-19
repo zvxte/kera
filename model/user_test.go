@@ -64,3 +64,25 @@ func TestIsPlainPasswordValid(t *testing.T) {
 		}
 	}
 }
+
+func TestIsHashedPasswordValid(t *testing.T) {
+	validHashedPasswords := []string{
+		"$argon2id$v=19$m=19,t=2,p=1$MTIzNDU2Nzg$4zj0kIPamvrQt6pWuGm2rg",
+		"$argon2id$v=19$m=19,t=2,p=1$MTIzNDU2Nzg$re2ihnZD/LvtAnf/gaol5+VqV/ENlwmkdudQUA+qpNs",
+		strings.Repeat("1", hashedPasswordMaxChars),
+	}
+	for _, hashedPassword := range validHashedPasswords {
+		if !IsHashedPasswordValid(hashedPassword) {
+			t.Errorf("hashed password should be valid: %q", hashedPassword)
+		}
+	}
+
+	invalidHashedPasswords := []string{
+		"1", "1234567", strings.Repeat("1", hashedPasswordMaxChars+1),
+	}
+	for _, hashedPassword := range invalidHashedPasswords {
+		if IsHashedPasswordValid(hashedPassword) {
+			t.Errorf("hashed password should not be valid: %q", hashedPassword)
+		}
+	}
+}
