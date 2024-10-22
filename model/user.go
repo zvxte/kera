@@ -53,7 +53,7 @@ func NewUser(username, plainPassword string) (User, error) {
 
 	displayName := username
 
-	hashedPassword := plainPassword
+	hashedPassword := plainPassword // TODO
 
 	location := time.UTC
 
