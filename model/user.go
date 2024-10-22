@@ -55,7 +55,7 @@ func NewUser(username, plainPassword string) (User, error) {
 
 	hashedPassword := plainPassword
 
-	location, _ := time.LoadLocation("UTC")
+	location := time.UTC
 
 	creationDate := time.Now().UTC()
 
@@ -81,6 +81,10 @@ func LoadUser(
 
 	if err := validateDisplayName(displayName); err != nil {
 		return User{}, err
+	}
+
+	if location == nil {
+		return User{}, errInternalServer
 	}
 
 	return User{
