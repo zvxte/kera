@@ -9,22 +9,23 @@ import (
 )
 
 const (
-	usernameMinChars       = 4
-	usernameMaxChars       = 16
-	displayNameMinChars    = 4
-	displayNameMaxChars    = 16
-	plainPasswordMinChars  = 8
-	plainPasswordMaxChars  = 128
-	hashedPasswordMinChars = 8
-	hashedPasswordMaxChars = 256
-	timezoneNameMaxChars   = 64
+	usernameMinChars      = 4
+	usernameMaxChars      = 16
+	displayNameMinChars   = 4
+	displayNameMaxChars   = 16
+	plainPasswordMinChars = 8
+	plainPasswordMaxChars = 128
 )
 
 var (
-	errInvalidUsername       = errors.New("invalid username")
-	errInvalidDisplayName    = errors.New("invalid display name")
-	errInvalidHashedPassword = errors.New("invalid hashed password")
-	errInvalidTimezoneName   = errors.New("invalid timezone name")
+	errUsernameTooShort    = errors.New("username is too short")
+	errUsernameTooLong     = errors.New("username is too long")
+	errUsernameInvalid     = errors.New("username is invalid")
+	errDisplayNameTooShort = errors.New("display name is too short")
+	errDisplayNameTooLong  = errors.New("display name is too long")
+	errDisplayNameInvalid  = errors.New("display name is invalid")
+	errPasswordTooShort    = errors.New("password is too short")
+	errPasswordTooLong     = errors.New("password is too long")
 )
 
 type User struct {
@@ -36,24 +37,28 @@ type User struct {
 	CreationDate   time.Time
 }
 
-func NewUser(
-	id UUID,
-	username, displayName, hashedPassword, timezoneName string,
-	creationDate time.Time,
-) (User, error) {
-	if !isUsernameValid(username) {
-		return User{}, errInvalidUsername
+func NewUser(username, plainPassword string) (User, error) {
+	if err := validateUsername(username); err != nil {
+		return User{}, err
 	}
-	if !isDisplayNameValid(displayName) {
-		return User{}, errInvalidDisplayName
+
+	if err := validatePlainPassword(plainPassword); err != nil {
+		return User{}, err
 	}
-	if !isHashedPasswordValid(hashedPassword) {
-		return User{}, errInvalidHashedPassword
+
+	id, err := NewUUIDv7()
+	if err != nil {
+		return User{}, errInternalServer
 	}
-	if !isTimezoneNameValid(timezoneName) {
-		return User{}, errInvalidTimezoneName
-	}
-	location, _ := time.LoadLocation(timezoneName)
+
+	displayName := username
+
+	hashedPassword := plainPassword
+
+	location, _ := time.LoadLocation("UTC")
+
+	creationDate := time.Now().UTC()
+
 	return User{
 		ID:             id,
 		Username:       username,
@@ -64,89 +69,96 @@ func NewUser(
 	}, nil
 }
 
-func isUsernameValid(username string) bool {
+func LoadUser(
+	id UUID,
+	username, displayName, hashedPassword string,
+	location *time.Location,
+	creationDate time.Time,
+) (User, error) {
+	if err := validateUsername(username); err != nil {
+		return User{}, err
+	}
+
+	if err := validateDisplayName(displayName); err != nil {
+		return User{}, err
+	}
+
+	return User{
+		ID:             id,
+		Username:       username,
+		DisplayName:    displayName,
+		HashedPassword: hashedPassword,
+		Location:       location,
+		CreationDate:   creationDate,
+	}, nil
+}
+
+func validateUsername(username string) error {
 	length := len(username)
-	if length < usernameMinChars || length > usernameMaxChars {
-		return false
+	if length < usernameMinChars {
+		return errUsernameTooShort
+	}
+	if length > usernameMaxChars {
+		return errUsernameTooLong
 	}
 
 	for _, c := range username {
 		if (c < 'A' || c > 'Z') && (c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '_' {
-			return false
+			return errUsernameInvalid
 		}
 	}
 
 	if len(strings.ReplaceAll(username, "_", "")) < usernameMinChars {
-		return false
+		return errUsernameInvalid
 	}
 
-	return true
+	return nil
 }
 
-func isDisplayNameValid(displayName string) bool {
+func validateDisplayName(displayName string) error {
 	// Prevents from counting runes on a large string
 	if len(displayName) > displayNameMaxChars*4 {
-		return false
+		return errDisplayNameTooLong
 	}
 
 	length := utf8.RuneCountInString(displayName)
-	if length < displayNameMinChars || length > displayNameMaxChars {
-		return false
+	if length < displayNameMinChars {
+		return errDisplayNameTooShort
+	}
+	if length > displayNameMaxChars {
+		return errDisplayNameTooLong
 	}
 
 	for _, c := range displayName {
 		if unicode.IsControl(c) || (unicode.IsSpace(c) && c != ' ') {
-			return false
+			return errDisplayNameInvalid
 		}
 	}
 
 	if utf8.RuneCountInString(strings.ReplaceAll(displayName, " ", "")) < usernameMinChars {
-		return false
+		return errDisplayNameTooShort
 	}
 
 	if strings.HasPrefix(displayName, " ") || strings.HasSuffix(displayName, " ") {
-		return false
+		return errDisplayNameInvalid
 	}
 
-	return true
+	return nil
 }
 
-func IsPlainPasswordValid(plainPassword string) bool {
+func validatePlainPassword(plainPassword string) error {
 	// Prevents from counting runes on a large string
 	if len(plainPassword) > plainPasswordMaxChars*4 {
-		return false
+		return errPasswordTooLong
 	}
 
 	length := utf8.RuneCountInString(plainPassword)
-	if length < plainPasswordMinChars || length > plainPasswordMaxChars {
-		return false
+	if length < plainPasswordMinChars {
+		return errPasswordTooShort
+	}
+	if length > plainPasswordMaxChars {
+		return errPasswordTooLong
 	}
 
-	return true
-}
-
-func isHashedPasswordValid(hashedPassword string) bool {
-	// Prevents from counting runes on a large string
-	if len(hashedPassword) > hashedPasswordMaxChars*4 {
-		return false
-	}
-
-	length := utf8.RuneCountInString(hashedPassword)
-	if length < hashedPasswordMinChars || length > hashedPasswordMaxChars {
-		return false
-	}
-
-	return true
-}
-
-func isTimezoneNameValid(timezoneName string) bool {
-	if len(timezoneName) > timezoneNameMaxChars {
-		return false
-	}
-
-	if _, err := time.LoadLocation(timezoneName); err != nil {
-		return false
-	}
-
-	return true
+	return nil
 }

@@ -5,13 +5,13 @@ import (
 	"testing"
 )
 
-func TestIsUsernameValid(t *testing.T) {
+func TestValidateUsername(t *testing.T) {
 	validUsernames := []string{
 		"AbcD", "1234", "abcd", "ab_cd", "_1234", "AB__CD", "ABCDabcd12345678",
 	}
 	for _, username := range validUsernames {
-		if !isUsernameValid(username) {
-			t.Errorf("username should be valid: %q", username)
+		if err := validateUsername(username); err != nil {
+			t.Errorf("username %q should be valid: %v", username, err)
 		}
 	}
 
@@ -19,19 +19,19 @@ func TestIsUsernameValid(t *testing.T) {
 		"A", "Ab", "Abc", "123", "_abc_", "____", "ABCDabcd123456789", "abcd.", "abcdπ", "ab cd",
 	}
 	for _, username := range invalidUsernames {
-		if isUsernameValid(username) {
-			t.Errorf("username should not be valid: %q", username)
+		if err := validateUsername(username); err == nil {
+			t.Errorf("username %q should not be valid: %v", username, err)
 		}
 	}
 }
 
-func TestIsDisplayNameValid(t *testing.T) {
+func TestValidateDisplayName(t *testing.T) {
 	validDisplayNames := []string{
 		"AbcD", "1234", "AB CD", "ABCDabcd12345678", "!@#$",
 	}
 	for _, displayName := range validDisplayNames {
-		if !isDisplayNameValid(displayName) {
-			t.Errorf("display name should be valid: %q", displayName)
+		if err := validateDisplayName(displayName); err != nil {
+			t.Errorf("display name %q should be valid: %v", displayName, err)
 		}
 	}
 
@@ -39,19 +39,19 @@ func TestIsDisplayNameValid(t *testing.T) {
 		"A", "Abc", "!@#", "ABCDabcd123456789", "πππ", "    ", "ab  c", " abcd",
 	}
 	for _, displayName := range invalidDisplayNames {
-		if isDisplayNameValid(displayName) {
-			t.Errorf("display name should not be valid: %q", displayName)
+		if err := validateDisplayName(displayName); err == nil {
+			t.Errorf("display name %q should not be valid: %v", displayName, err)
 		}
 	}
 }
 
-func TestIsPlainPasswordValid(t *testing.T) {
+func TestValidatePlainPassword(t *testing.T) {
 	validPlainPasswords := []string{
 		"12345678", strings.Repeat("1", plainPasswordMaxChars),
 	}
 	for _, plainPassword := range validPlainPasswords {
-		if !isPlainPasswordValid(plainPassword) {
-			t.Errorf("plain password should be valid: %q", plainPassword)
+		if err := validatePlainPassword(plainPassword); err != nil {
+			t.Errorf("plain password %q should be valid: %v", plainPassword, err)
 		}
 	}
 
@@ -59,30 +59,8 @@ func TestIsPlainPasswordValid(t *testing.T) {
 		"1", "1234", "1234567", strings.Repeat("1", plainPasswordMaxChars+1),
 	}
 	for _, plainPassword := range invalidPlainPasswords {
-		if isPlainPasswordValid(plainPassword) {
-			t.Errorf("plain password should not be valid: %q", plainPassword)
-		}
-	}
-}
-
-func TestIsHashedPasswordValid(t *testing.T) {
-	validHashedPasswords := []string{
-		"$argon2id$v=19$m=19,t=2,p=1$MTIzNDU2Nzg$4zj0kIPamvrQt6pWuGm2rg",
-		"$argon2id$v=19$m=19,t=2,p=1$MTIzNDU2Nzg$re2ihnZD/LvtAnf/gaol5+VqV/ENlwmkdudQUA+qpNs",
-		strings.Repeat("1", hashedPasswordMaxChars),
-	}
-	for _, hashedPassword := range validHashedPasswords {
-		if !isHashedPasswordValid(hashedPassword) {
-			t.Errorf("hashed password should be valid: %q", hashedPassword)
-		}
-	}
-
-	invalidHashedPasswords := []string{
-		"1", "1234567", strings.Repeat("1", hashedPasswordMaxChars+1),
-	}
-	for _, hashedPassword := range invalidHashedPasswords {
-		if isHashedPasswordValid(hashedPassword) {
-			t.Errorf("hashed password should not be valid: %q", hashedPassword)
+		if err := validatePlainPassword(plainPassword); err == nil {
+			t.Errorf("plain password %q should not be valid: %v", plainPassword, err)
 		}
 	}
 }
