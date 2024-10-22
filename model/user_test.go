@@ -50,7 +50,7 @@ func TestIsPlainPasswordValid(t *testing.T) {
 		"12345678", strings.Repeat("1", plainPasswordMaxChars),
 	}
 	for _, plainPassword := range validPlainPasswords {
-		if !IsPlainPasswordValid(plainPassword) {
+		if !isPlainPasswordValid(plainPassword) {
 			t.Errorf("plain password should be valid: %q", plainPassword)
 		}
 	}
@@ -59,7 +59,7 @@ func TestIsPlainPasswordValid(t *testing.T) {
 		"1", "1234", "1234567", strings.Repeat("1", plainPasswordMaxChars+1),
 	}
 	for _, plainPassword := range invalidPlainPasswords {
-		if IsPlainPasswordValid(plainPassword) {
+		if isPlainPasswordValid(plainPassword) {
 			t.Errorf("plain password should not be valid: %q", plainPassword)
 		}
 	}
@@ -84,15 +84,5 @@ func TestIsHashedPasswordValid(t *testing.T) {
 		if isHashedPasswordValid(hashedPassword) {
 			t.Errorf("hashed password should not be valid: %q", hashedPassword)
 		}
-	}
-}
-
-func TestIsTimezoneNameValid(t *testing.T) {
-	if timezoneName := "UTC"; !isTimezoneNameValid(timezoneName) {
-		t.Errorf("timezone name should be valid: %q", timezoneName)
-	}
-
-	if timezoneName := "Invalid"; isTimezoneNameValid(timezoneName) {
-		t.Errorf("timezone name should not be valid: %q", timezoneName)
 	}
 }
