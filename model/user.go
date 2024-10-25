@@ -6,6 +6,8 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/zvxte/kera/hash/argon2id"
 )
 
 const (
@@ -53,7 +55,10 @@ func NewUser(username, plainPassword string) (User, error) {
 
 	displayName := username
 
-	hashedPassword := plainPassword // TODO
+	hashedPassword, err := argon2id.Hash(plainPassword, argon2id.DefaultParams)
+	if err != nil {
+		return User{}, errInternalServer
+	}
 
 	location := time.UTC
 
