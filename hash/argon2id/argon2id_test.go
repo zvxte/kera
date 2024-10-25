@@ -37,64 +37,79 @@ func TestVerifyHash(t *testing.T) {
 		input       string
 		hashedInput string
 		shouldErr   bool
+		shouldBe    bool
 	}{
 		{
 			"Valid",
 			"password",
 			"$argon2id$v=19$m=19456,t=2,p=1$YWFhYUFBQUFhYWFhQUFBQQ$KdIUCTl6NPY+m4WM+pHJW0fWIQMLQV5LCZE7zYvqryU",
 			false,
+			true,
 		},
 		{
 			"Valid short",
 			"a",
-			"$argon2id$v=19$m=46,t=1,p=1$c2FsdHNhbHQ$Q8zx1xbonmeJqQLZjTlM6o8j1vUXMbO8ALrthl24Xps",
+			"$argon2id$v=19$m=19456,t=4,p=2$QUFBQWFhYWFBQUFBYWFhYQ$IPFpgW+DUFhT3f007pRzz2HUV5wPAV0VzANxSuo81g4",
 			false,
+			true,
 		},
 		{
 			"Valid long",
 			strings.Repeat("a", 256),
 			"$argon2id$v=19$m=9,t=4,p=1$MTIzNDU2Nzg$HjQikypjR1bPBW7IkAIwi3Khxu4HLjRBwl1KBRDf/w4",
 			false,
+			true,
 		},
 		{
 			"Invalid",
 			"password",
 			"$argon2id$v=19$m=19,t=2,p=1$",
 			true,
+			false,
 		},
 		{
 			"Invalid",
 			"password",
 			"$argon2id$v=19$m=19,t=2,p=1$MTIzNDU2Nzg$",
 			true,
+			false,
 		},
 		{
 			"Invalid empty",
 			"password",
 			"",
 			true,
+			false,
 		},
 		{
 			"Invalid variant",
 			"password",
 			"$argon2i$v=19$m=19,t=2,p=1$MTIzNDU2Nzg$5vI4/d3YW0ADXglN8ziuIJoqS/dj3wNFLOcc394xvRk",
 			true,
+			false,
 		},
 		{
 			"Invalid version",
 			"password",
 			"$argon2i$v=18$m=19,t=2,p=1$MTIzNDU2Nzg$5vI4/d3YW0ADXglN8ziuIJoqS/dj3wNFLOcc394xvRk",
 			true,
+			false,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := VerifyHash(test.input, test.hashedInput)
+			isValid, err := VerifyHash(test.input, test.hashedInput)
 			if (err != nil) != test.shouldErr {
 				t.Errorf(
 					"VerifyHash(%q, %q), error=%v, shouldErr=%v",
 					test.input, test.hashedInput, err, test.shouldErr,
+				)
+			}
+			if isValid != test.shouldBe {
+				t.Errorf(
+					"VerifyHash(%q, %q), got=%v, expected=%v",
+					test.input, test.hashedInput, isValid, test.shouldBe,
 				)
 			}
 		})
