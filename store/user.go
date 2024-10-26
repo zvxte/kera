@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -10,7 +11,8 @@ import (
 )
 
 type UserStore interface {
-	CreateUser(ctx context.Context, user model.User) error
+	Create(ctx context.Context, user model.User) error
+	IsTaken(ctx context.Context, username string) (bool, error)
 }
 
 type SqlUserStore struct {
@@ -24,7 +26,7 @@ func NewSqlUserStore(db *sql.DB) (*SqlUserStore, error) {
 	return &SqlUserStore{db}, nil
 }
 
-func (sus SqlUserStore) CreateUser(ctx context.Context, user model.User) error {
+func (sus SqlUserStore) Create(ctx context.Context, user model.User) error {
 	query := `
 	INSERT INTO users(id, username, username_lower, display_name, hashed_password, location, creation_date)
 	VALUES ($1, $2, $3, $4, $5, $6, $7);
@@ -39,4 +41,28 @@ func (sus SqlUserStore) CreateUser(ctx context.Context, user model.User) error {
 	}
 
 	return nil
+}
+
+func (sus SqlUserStore) IsTaken(ctx context.Context, username string) (bool, error) {
+	query := `
+	SELECT 1
+	FROM users
+	WHERE username_lower = $1;
+	`
+	row := sus.db.QueryRowContext(
+		ctx, query, strings.ToLower(username),
+	)
+
+	var isTaken uint8
+	err := row.Scan(&isTaken)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+
+	if isTaken == 1 {
+		return true, nil
+	}
+
+	return false, fmt.Errorf("failed to query: %w", err)
 }
