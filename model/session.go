@@ -23,22 +23,22 @@ type Session struct {
 	ExpirationDate time.Time
 }
 
-func NewSession(sessionID string) Session {
+func NewSession(sessionID string) *Session {
 	hashedID := sha256.Hash(sessionID)
 
-	creationDate := time.Now().UTC()
+	creationDate := time.Now().UTC().Truncate(24 * time.Hour)
 
 	expirationDate := creationDate.Add(sessionExpirationDuration)
 
-	return Session{
+	return &Session{
 		HashedID:       hashedID,
 		CreationDate:   creationDate,
 		ExpirationDate: expirationDate,
 	}
 }
 
-func LoadSession(hashedID HashedSessionID, creationDate, expirationDate time.Time) Session {
-	return Session{
+func LoadSession(hashedID HashedSessionID, creationDate, expirationDate time.Time) *Session {
+	return &Session{
 		HashedID:       hashedID,
 		CreationDate:   creationDate,
 		ExpirationDate: expirationDate,
