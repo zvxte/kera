@@ -135,10 +135,10 @@ func TestValidateUsername(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := validateUsername(test.username)
+			err := ValidateUsername(test.username)
 			if (err != nil) != test.shouldErr {
 				t.Errorf(
-					"validateUsername(%q), error=%v, shouldErr=%v",
+					"ValidateUsername(%q), error=%v, shouldErr=%v",
 					test.username, err, test.shouldErr,
 				)
 			}
@@ -165,10 +165,10 @@ func TestValidateDisplayName(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := validateDisplayName(test.displayName)
+			err := ValidateDisplayName(test.displayName)
 			if (err != nil) != test.shouldErr {
 				t.Errorf(
-					"validateDisplayName(%q), error=%v, shouldErr=%v",
+					"ValidateDisplayName(%q), error=%v, shouldErr=%v",
 					test.displayName, err, test.shouldErr,
 				)
 			}
@@ -191,10 +191,10 @@ func TestValidatePlainPassword(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := validatePlainPassword(test.plainPassword)
+			err := ValidatePlainPassword(test.plainPassword)
 			if (err != nil) != test.shouldErr {
 				t.Errorf(
-					"validatePlainPassword(%q), error=%v, shouldErr=%v",
+					"ValidatePlainPassword(%q), error=%v, shouldErr=%v",
 					test.plainPassword, err, test.shouldErr,
 				)
 			}

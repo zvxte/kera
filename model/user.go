@@ -39,32 +39,32 @@ type User struct {
 	CreationDate   time.Time
 }
 
-func NewUser(username, plainPassword string) (User, error) {
-	if err := validateUsername(username); err != nil {
-		return User{}, err
+func NewUser(username, plainPassword string) (*User, error) {
+	if err := ValidateUsername(username); err != nil {
+		return nil, err
 	}
 
-	if err := validatePlainPassword(plainPassword); err != nil {
-		return User{}, err
+	if err := ValidatePlainPassword(plainPassword); err != nil {
+		return nil, err
 	}
 
 	id, err := NewUUIDv7()
 	if err != nil {
-		return User{}, errInternalServer
+		return nil, errInternalServer
 	}
 
 	displayName := username
 
 	hashedPassword, err := argon2id.Hash(plainPassword, argon2id.DefaultParams)
 	if err != nil {
-		return User{}, errInternalServer
+		return nil, errInternalServer
 	}
 
 	location := time.UTC
 
-	creationDate := time.Now().UTC()
+	creationDate := time.Now().UTC().Truncate(24 * time.Hour)
 
-	return User{
+	return &User{
 		ID:             id,
 		Username:       username,
 		DisplayName:    displayName,
@@ -79,20 +79,20 @@ func LoadUser(
 	username, displayName, hashedPassword string,
 	location *time.Location,
 	creationDate time.Time,
-) (User, error) {
-	if err := validateUsername(username); err != nil {
-		return User{}, err
+) (*User, error) {
+	if err := ValidateUsername(username); err != nil {
+		return nil, err
 	}
 
-	if err := validateDisplayName(displayName); err != nil {
-		return User{}, err
+	if err := ValidateDisplayName(displayName); err != nil {
+		return nil, err
 	}
 
 	if location == nil {
-		return User{}, errInternalServer
+		return nil, errInternalServer
 	}
 
-	return User{
+	return &User{
 		ID:             id,
 		Username:       username,
 		DisplayName:    displayName,
@@ -102,7 +102,7 @@ func LoadUser(
 	}, nil
 }
 
-func validateUsername(username string) error {
+func ValidateUsername(username string) error {
 	length := len(username)
 	if length < usernameMinChars {
 		return errUsernameTooShort
@@ -124,7 +124,7 @@ func validateUsername(username string) error {
 	return nil
 }
 
-func validateDisplayName(displayName string) error {
+func ValidateDisplayName(displayName string) error {
 	// Prevents from counting runes on a large string
 	if len(displayName) > displayNameMaxChars*4 {
 		return errDisplayNameTooLong
@@ -155,7 +155,7 @@ func validateDisplayName(displayName string) error {
 	return nil
 }
 
-func validatePlainPassword(plainPassword string) error {
+func ValidatePlainPassword(plainPassword string) error {
 	// Prevents from counting runes on a large string
 	if len(plainPassword) > plainPasswordMaxChars*4 {
 		return errPasswordTooLong
