@@ -9,7 +9,7 @@ import (
 )
 
 type SessionStore interface {
-	Create(ctx context.Context, session model.Session, userID model.UUID) error
+	Create(ctx context.Context, session *model.Session, userID model.UUID) error
 }
 
 type SqlSessionStore struct {
@@ -24,7 +24,7 @@ func NewSqlSessionStore(db *sql.DB) (*SqlSessionStore, error) {
 }
 
 func (sss SqlSessionStore) Create(
-	ctx context.Context, session model.Session, userID model.UUID,
+	ctx context.Context, session *model.Session, userID model.UUID,
 ) error {
 	query := `
 	INSERT INTO sessions(id, user_id, creation_date, expiration_date)
@@ -32,7 +32,7 @@ func (sss SqlSessionStore) Create(
 	`
 	_, err := sss.db.ExecContext(
 		ctx, query,
-		session.HashedID, userID, session.CreationDate, session.ExpirationDate,
+		session.HashedID[:], userID, session.CreationDate, session.ExpirationDate,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
