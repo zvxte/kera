@@ -1,8 +1,13 @@
 package main
 
-import "github.com/zvxte/kera/server"
+import (
+	"github.com/zvxte/kera/server"
+)
 
 func main() {
-	server := server.NewServer()
+	server, err := server.NewServer()
+	if err != nil {
+		panic(err)
+	}
 	server.Run(":5000")
 }
