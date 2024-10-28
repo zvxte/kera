@@ -26,7 +26,7 @@ type Session struct {
 func NewSession(sessionID string) *Session {
 	hashedID := sha256.Hash(sessionID)
 
-	creationDate := time.Now().UTC().Truncate(24 * time.Hour)
+	creationDate := dateNow()
 
 	expirationDate := creationDate.Add(sessionExpirationDuration)
 

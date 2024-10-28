@@ -62,7 +62,7 @@ func NewUser(username, plainPassword string) (*User, error) {
 
 	location := time.UTC
 
-	creationDate := time.Now().UTC().Truncate(24 * time.Hour)
+	creationDate := dateNow()
 
 	return &User{
 		ID:             id,
