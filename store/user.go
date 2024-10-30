@@ -29,12 +29,12 @@ func NewSqlUserStore(db *sql.DB) (*SqlUserStore, error) {
 	return &SqlUserStore{db}, nil
 }
 
-func (sus SqlUserStore) Create(ctx context.Context, user *model.User) error {
+func (s SqlUserStore) Create(ctx context.Context, user *model.User) error {
 	query := `
 	INSERT INTO users(id, username, username_lower, display_name, hashed_password, location, creation_date)
 	VALUES ($1, $2, $3, $4, $5, $6, $7);
 	`
-	_, err := sus.db.ExecContext(
+	_, err := s.db.ExecContext(
 		ctx, query,
 		user.ID, user.Username, strings.ToLower(user.Username), user.DisplayName,
 		user.HashedPassword, user.Location.String(), user.CreationDate,
@@ -46,13 +46,13 @@ func (sus SqlUserStore) Create(ctx context.Context, user *model.User) error {
 	return nil
 }
 
-func (sus SqlUserStore) IsTaken(ctx context.Context, username string) (bool, error) {
+func (s SqlUserStore) IsTaken(ctx context.Context, username string) (bool, error) {
 	query := `
 	SELECT 1
 	FROM users
 	WHERE username_lower = $1;
 	`
-	row := sus.db.QueryRowContext(
+	row := s.db.QueryRowContext(
 		ctx, query, strings.ToLower(username),
 	)
 
@@ -70,13 +70,13 @@ func (sus SqlUserStore) IsTaken(ctx context.Context, username string) (bool, err
 	return false, fmt.Errorf("failed to query: %w", err)
 }
 
-func (sus SqlUserStore) UpdateLocation(ctx context.Context, id model.UUID, location *time.Location) error {
+func (s SqlUserStore) UpdateLocation(ctx context.Context, id model.UUID, location *time.Location) error {
 	query := `
 	UPDATE users
 	SET location = $1
 	WHERE id = $2;
 	`
-	_, err := sus.db.ExecContext(
+	_, err := s.db.ExecContext(
 		ctx, query,
 		id, location.String(),
 	)
@@ -87,13 +87,13 @@ func (sus SqlUserStore) UpdateLocation(ctx context.Context, id model.UUID, locat
 	return nil
 }
 
-func (sus SqlUserStore) GetByUsername(ctx context.Context, username string) (*model.User, error) {
+func (s SqlUserStore) GetByUsername(ctx context.Context, username string) (*model.User, error) {
 	query := `
 	SELECT id, username, display_name, hashed_password, location, creation_date
 	FROM users
 	WHERE username_lower = $1;
 	`
-	row := sus.db.QueryRowContext(
+	row := s.db.QueryRowContext(
 		ctx, query, strings.ToLower(username),
 	)
 
@@ -119,7 +119,7 @@ func (sus SqlUserStore) GetByUsername(ctx context.Context, username string) (*mo
 	location, err := time.LoadLocation(locationName)
 	if err != nil {
 		location, _ = time.LoadLocation("UTC")
-		err = sus.UpdateLocation(ctx, id, location)
+		err = s.UpdateLocation(ctx, id, location)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get user: %w", err)
 		}
