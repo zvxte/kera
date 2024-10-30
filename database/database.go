@@ -111,3 +111,27 @@ func (sd *SqlDatabase) getDatabaseMigrationVersion(ctx context.Context) (uint16,
 	}
 	return databaseMigrationVersion, nil
 }
+
+// Teardown drops database migrations.
+func (sd *SqlDatabase) Teardown(ctx context.Context) error {
+	query := `
+	DROP SCHEMA public CASCADE;
+	CREATE SCHEMA public;
+	`
+	_, err := sd.DB.ExecContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to teardown: %w", err)
+	}
+
+	query = `
+	SELECT tablename
+	FROM pg_tables
+	WHERE schemaname = 'public';
+	`
+	err = sd.DB.QueryRowContext(ctx, query).Scan()
+	if err != sql.ErrNoRows {
+		return fmt.Errorf("failed to teardown: %w", err)
+	}
+
+	return nil
+}

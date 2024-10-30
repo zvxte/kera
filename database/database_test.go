@@ -57,4 +57,10 @@ func TestSqlDatabase(t *testing.T) {
 			t.Error(err)
 		}
 	})
+
+	t.Run("Teardown", func(t *testing.T) {
+		if err := sqlDatabase.Teardown(ctx); err != nil {
+			t.Error(err)
+		}
+	})
 }
