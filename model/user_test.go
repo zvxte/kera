@@ -20,13 +20,13 @@ func TestNewUser(t *testing.T) {
 			false,
 		},
 		{
-			"Invalid username",
+			"Invalid: username",
 			"aaa",
 			"password",
 			true,
 		},
 		{
-			"Invalid password",
+			"Invalid: password",
 			"username",
 			"aaa",
 			true,
@@ -68,7 +68,7 @@ func TestLoadUser(t *testing.T) {
 			false,
 		},
 		{
-			"Invalid username",
+			"Invalid: username",
 			UUID{},
 			"aaa",
 			"display name",
@@ -78,7 +78,7 @@ func TestLoadUser(t *testing.T) {
 			true,
 		},
 		{
-			"Invalid display name",
+			"Invalid: display name",
 			UUID{},
 			"username",
 			"  display name  ",
@@ -88,7 +88,7 @@ func TestLoadUser(t *testing.T) {
 			true,
 		},
 		{
-			"Invalid location",
+			"Invalid: location",
 			UUID{},
 			"username",
 			"display name",
@@ -125,12 +125,12 @@ func TestValidateUsername(t *testing.T) {
 	}{
 		{"Valid", "username", false},
 		{"Valid", "user_name", false},
-		{"Too short", "aaa", true},
-		{"Too short", "_aaa_", true},
-		{"Too long", "aaaaAAAAaaaaAAAAa", true},
-		{"Invalid", "____", true},
-		{"Invalid", "aaaa.", true},
-		{"Invalid", "aa aa", true},
+		{"Invalid: too short", "aaa", true},
+		{"Invalid: too short", "_aaa_", true},
+		{"Invalid: too long", "aaaaAAAAaaaaAAAAa", true},
+		{"Invalid: only underscores", "____", true},
+		{"Invalid: character", "aaaa.", true},
+		{"Invalid: space", "aa aa", true},
 	}
 
 	for _, test := range tests {
@@ -155,12 +155,12 @@ func TestValidateDisplayName(t *testing.T) {
 		{"Valid", "display name", false},
 		{"Valid", "display name!", false},
 		{"Valid", "display_name 💻", false},
-		{"Too short", "aaa", true},
-		{"Too short", "a a a", true},
-		{"Too short", "    ", true},
-		{"Too long", "aaaaAAAAaaaaAAAAa", true},
-		{"Invalid", "display name \t", true},
-		{"Invalid", " display name ", true},
+		{"Invalid: too short", "aaa", true},
+		{"Invalid: too short", "a a a", true},
+		{"Invalid: too long", "aaaaAAAAaaaaAAAAa", true},
+		{"Invalid: only spaces", "    ", true},
+		{"Invalid: escape character", "display name \t", true},
+		{"Invalid: spaces around", " display name ", true},
 	}
 
 	for _, test := range tests {
@@ -185,8 +185,8 @@ func TestValidatePlainPassword(t *testing.T) {
 		{"Valid", "password", false},
 		{"Valid", "aa aa aa", false},
 		{"Valid", "display_name 💻 \t", false},
-		{"Too short", "aaaaAAA", true},
-		{"Too long", strings.Repeat("a", plainPasswordMaxChars+1), true},
+		{"Invalid: too short", "aaaaAAA", true},
+		{"Invalid: too long", strings.Repeat("a", plainPasswordMaxChars+1), true},
 	}
 
 	for _, test := range tests {

@@ -16,7 +16,7 @@ func TestParseUUID(t *testing.T) {
 	}{
 		{"Valid", "0192a14e-0605-726d-89ed-6b39dae2ea91", false},
 		{"Invalid", "0192a14e-", true},
-		{"Invalid", "", true},
+		{"Invalid: empty", "", true},
 	}
 
 	for _, test := range tests {
@@ -39,12 +39,12 @@ func TestString(t *testing.T) {
 		shouldBe string
 	}{
 		{
-			"Valid all zeros",
+			"Valid: all zeros",
 			UUID{},
 			"00000000-0000-0000-0000-000000000000",
 		},
 		{
-			"Valid random",
+			"Valid: random",
 			UUID{
 				0x55, 0x0e, 0x84, 0x00,
 				0xe2, 0x9b, 0x41, 0xd4,

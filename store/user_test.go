@@ -25,7 +25,7 @@ func TestNewSqlUserStore(t *testing.T) {
 		shouldErr bool
 	}{
 		{"Valid", db, false},
-		{"Invalid nil", nil, true},
+		{"Invalid: nil sql.DB pointer", nil, true},
 	}
 
 	for _, test := range tests {

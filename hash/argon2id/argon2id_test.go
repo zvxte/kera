@@ -13,9 +13,9 @@ func TestHash(t *testing.T) {
 		shouldErr bool
 	}{
 		{"Valid", "password", false},
-		{"Valid short", "a", false},
-		{"Valid long", strings.Repeat("a", 256), false},
-		{"Valid empty", "", false},
+		{"Valid: too short", "a", false},
+		{"Valid: too long", strings.Repeat("a", 256), false},
+		{"Valid: empty", "", false},
 	}
 
 	for _, test := range tests {
@@ -47,49 +47,49 @@ func TestVerifyHash(t *testing.T) {
 			true,
 		},
 		{
-			"Valid short",
+			"Valid: short",
 			"a",
 			"$argon2id$v=19$m=19456,t=4,p=2$QUFBQWFhYWFBQUFBYWFhYQ$IPFpgW+DUFhT3f007pRzz2HUV5wPAV0VzANxSuo81g4",
 			false,
 			true,
 		},
 		{
-			"Valid long",
+			"Valid: long",
 			strings.Repeat("a", 256),
 			"$argon2id$v=19$m=9,t=4,p=1$MTIzNDU2Nzg$HjQikypjR1bPBW7IkAIwi3Khxu4HLjRBwl1KBRDf/w4",
 			false,
 			true,
 		},
 		{
-			"Invalid",
+			"Invalid: empty salt and key",
 			"password",
 			"$argon2id$v=19$m=19,t=2,p=1$",
 			true,
 			false,
 		},
 		{
-			"Invalid",
+			"Invalid: empty key",
 			"password",
 			"$argon2id$v=19$m=19,t=2,p=1$MTIzNDU2Nzg$",
 			true,
 			false,
 		},
 		{
-			"Invalid empty",
+			"Invalid: empty",
 			"password",
 			"",
 			true,
 			false,
 		},
 		{
-			"Invalid variant",
+			"Invalid: variant",
 			"password",
 			"$argon2i$v=19$m=19,t=2,p=1$MTIzNDU2Nzg$5vI4/d3YW0ADXglN8ziuIJoqS/dj3wNFLOcc394xvRk",
 			true,
 			false,
 		},
 		{
-			"Invalid version",
+			"Invalid: version",
 			"password",
 			"$argon2i$v=18$m=19,t=2,p=1$MTIzNDU2Nzg$5vI4/d3YW0ADXglN8ziuIJoqS/dj3wNFLOcc394xvRk",
 			true,
