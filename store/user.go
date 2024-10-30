@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -59,7 +58,7 @@ func (s SqlUserStore) IsTaken(ctx context.Context, username string) (bool, error
 	var isTaken uint8
 	err := row.Scan(&isTaken)
 
-	if errors.Is(err, sql.ErrNoRows) {
+	if err == sql.ErrNoRows {
 		return false, nil
 	}
 
@@ -103,7 +102,7 @@ func (s SqlUserStore) GetByUsername(ctx context.Context, username string) (*mode
 		&idDB, &usernameDB, &displayName, &hashedPassword, &locationName, &creationDate,
 	)
 
-	if errors.Is(err, sql.ErrNoRows) {
+	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 
