@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/zvxte/kera/model"
@@ -32,4 +33,24 @@ func NewSqlHabitStore(db *sql.DB) (*SqlHabitStore, error) {
 		return nil, NilDBPointerError
 	}
 	return &SqlHabitStore{db}, nil
+}
+
+func (s SqlHabitStore) Create(
+	ctx context.Context, habit *model.Habit, userID model.UUID,
+) error {
+	query := `
+	INSERT INTO habits(id, user_id, status, title, description,
+					   tracked_week_days, start_date, end_date)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+	`
+	_, err := s.db.ExecContext(
+		ctx, query,
+		habit.ID, userID, habit.Status, habit.Title, habit.Description,
+		habit.TrackedWeekDays, habit.StartDate, habit.EndDate,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create habit: %w", err)
+	}
+
+	return nil
 }
