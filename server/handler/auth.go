@@ -28,13 +28,13 @@ func NewAuthMux(
 	sessionStore store.SessionStore,
 	logger *log.Logger,
 ) *http.ServeMux {
-	authHandler := NewAuthHandler(userStore, sessionStore, logger)
+	h := NewAuthHandler(userStore, sessionStore, logger)
 
-	authMux := http.NewServeMux()
-	authMux.HandleFunc("/login", MakeHandlerFunc(authHandler.Login))
-	authMux.HandleFunc("/register", MakeHandlerFunc(authHandler.Register))
+	m := http.NewServeMux()
+	m.HandleFunc("POST /login", MakeHandlerFunc(h.Login))
+	m.HandleFunc("POST /register", MakeHandlerFunc(h.Register))
 
-	return authMux
+	return m
 }
 
 type AuthHandler struct {
@@ -47,14 +47,11 @@ func NewAuthHandler(
 	userStore store.UserStore,
 	sessionStore store.SessionStore,
 	logger *log.Logger,
-) AuthHandler {
-	return AuthHandler{userStore: userStore, sessionStore: sessionStore, logger: logger}
+) *AuthHandler {
+	return &AuthHandler{userStore: userStore, sessionStore: sessionStore, logger: logger}
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) (int, error) {
-	if r.Method != http.MethodPost {
-		return http.StatusMethodNotAllowed, ErrMethodNotAllowed
-	}
 	if r.Header.Get("Content-Type") != "application/json" {
 		return http.StatusUnsupportedMediaType, ErrUnsupportedMediaType
 	}
@@ -122,9 +119,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) (int, error)
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) (int, error) {
-	if r.Method != http.MethodPost {
-		return http.StatusMethodNotAllowed, ErrMethodNotAllowed
-	}
 	if r.Header.Get("Content-Type") != "application/json" {
 		return http.StatusUnsupportedMediaType, ErrUnsupportedMediaType
 	}
