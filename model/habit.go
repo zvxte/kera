@@ -103,7 +103,7 @@ func NewHabit(
 
 	status := HabitActive
 
-	startDate := dateNow()
+	startDate := DateNow()
 
 	endDate := time.Time{}
 
