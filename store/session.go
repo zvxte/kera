@@ -4,12 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/zvxte/kera/model"
 )
 
 type SessionStore interface {
 	Create(ctx context.Context, session *model.Session, userID model.UUID) error
+	Get(ctx context.Context, hashedSessionID model.HashedSessionID) (*model.Session, model.UUID, error)
 }
 
 type SqlSessionStore struct {
@@ -39,4 +41,38 @@ func (s SqlSessionStore) Create(
 	}
 
 	return nil
+}
+
+func (s SqlSessionStore) Get(
+	ctx context.Context, hashedSessionID model.HashedSessionID,
+) (*model.Session, model.UUID, error) {
+	query := `
+	SELECT user_id, creation_date, expiration_date
+	FROM sessions
+	WHERE id = $1;
+	`
+	row := s.db.QueryRowContext(ctx, query, hashedSessionID[:])
+
+	var rawUserID string
+	var creation_date, expiration_date time.Time
+	err := row.Scan(&rawUserID, &creation_date, &expiration_date)
+
+	if err == sql.ErrNoRows {
+		return nil, model.UUID{}, nil
+	}
+
+	if err != nil {
+		return nil, model.UUID{}, fmt.Errorf("failed to get session: %w", err)
+	}
+
+	userID, err := model.ParseUUID(rawUserID)
+	if err != nil {
+		return nil, model.UUID{}, fmt.Errorf("failed to get session: %w", err)
+	}
+
+	session := model.LoadSession(
+		hashedSessionID, creation_date, expiration_date,
+	)
+
+	return session, userID, nil
 }
