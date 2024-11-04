@@ -7,6 +7,7 @@ var (
 	ErrMethodNotAllowed     = errors.New("method not allowed")
 	ErrBadRequest           = errors.New("bad request")
 	ErrUnsupportedMediaType = errors.New("unsupported media type")
+	ErrUnauthorized         = errors.New("unauthorized")
 )
 
 type handlerError struct {
