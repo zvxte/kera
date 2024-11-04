@@ -15,6 +15,7 @@ type UserStore interface {
 	IsTaken(ctx context.Context, username string) (bool, error)
 	UpdateLocation(ctx context.Context, id model.UUID, location *time.Location) error
 	GetByUsername(ctx context.Context, username string) (*model.User, error)
+	Get(ctx context.Context, userID model.UUID) (*model.User, error)
 }
 
 type SqlUserStore struct {
@@ -96,10 +97,10 @@ func (s SqlUserStore) GetByUsername(ctx context.Context, username string) (*mode
 		ctx, query, strings.ToLower(username),
 	)
 
-	var idDB, usernameDB, displayName, hashedPassword, locationName string
+	var rawUserID, dbUsername, displayName, hashedPassword, locationName string
 	var creationDate time.Time
 	err := row.Scan(
-		&idDB, &usernameDB, &displayName, &hashedPassword, &locationName, &creationDate,
+		&rawUserID, &dbUsername, &displayName, &hashedPassword, &locationName, &creationDate,
 	)
 
 	if err == sql.ErrNoRows {
@@ -110,14 +111,14 @@ func (s SqlUserStore) GetByUsername(ctx context.Context, username string) (*mode
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	id, err := model.ParseUUID(idDB)
+	id, err := model.ParseUUID(rawUserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
 	location, err := time.LoadLocation(locationName)
 	if err != nil {
-		location, _ = time.LoadLocation("UTC")
+		location = time.UTC
 		err = s.UpdateLocation(ctx, id, location)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get user: %w", err)
@@ -125,8 +126,50 @@ func (s SqlUserStore) GetByUsername(ctx context.Context, username string) (*mode
 	}
 
 	user, err := model.LoadUser(
-		id, usernameDB, displayName, hashedPassword, location, creationDate,
+		id, dbUsername, displayName, hashedPassword, location, creationDate,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	return user, nil
+}
+
+func (s SqlUserStore) Get(ctx context.Context, userID model.UUID) (*model.User, error) {
+	query := `
+	SELECT username, display_name, hashed_password, location, creation_date
+	FROM users
+	WHERE id = $1;
+	`
+	row := s.db.QueryRowContext(ctx, query, userID[:])
+
+	var dbUsername, displayName, hashedPassword, locationName string
+	var creationDate time.Time
+	err := row.Scan(
+		&dbUsername, &displayName, &hashedPassword, &locationName, &creationDate,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	location, err := time.LoadLocation(locationName)
+	if err != nil {
+		location = time.UTC
+		err = s.UpdateLocation(ctx, userID, location)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get user: %w", err)
+		}
+	}
+
+	user, err := model.LoadUser(
+		userID, dbUsername, displayName, hashedPassword, location, creationDate,
+	)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
