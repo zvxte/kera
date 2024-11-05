@@ -1,5 +1,7 @@
 package model
 
+// TODO: Documentation
+
 import (
 	"errors"
 	"strings"
