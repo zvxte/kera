@@ -42,7 +42,7 @@ type User struct {
 
 // NewUser returns a new *User.
 // It fails if the provided parameters do not meet the application requirements.
-// The returned error is safe for client-side handling.
+// The returned error is safe for client-side message.
 // The plain password is hashed using Argon2ID.
 // The Username and DisplayName fields are set to the given username,
 // Location is set to UTC, and CreationDate is set to the current date in UTC.
@@ -83,7 +83,7 @@ func NewUser(username, plainPassword string) (*User, error) {
 
 // LoadUser returns a *User.
 // It fails if the provided parameters do not meet the application requirements.
-// The returned error is safe for client-side handling.
+// The returned error is safe for client-side message.
 // It returns errInternalServer if provided location is nil.
 func LoadUser(
 	id UUID,
@@ -114,7 +114,7 @@ func LoadUser(
 }
 
 // It fails if the provided parameters do not meet the application requirements.
-// The returned error is safe for client-side handling.
+// The returned error is safe for client-side message.
 func ValidateUsername(username string) error {
 	length := len(username)
 	if length < usernameMinChars {
@@ -138,7 +138,7 @@ func ValidateUsername(username string) error {
 }
 
 // It fails if the provided parameters do not meet the application requirements.
-// The returned error is safe for client-side handling.
+// The returned error is safe for client-side message.
 func ValidateDisplayName(displayName string) error {
 	// Prevents from counting runes on a large string
 	if len(displayName) > displayNameMaxChars*4 {
@@ -171,7 +171,7 @@ func ValidateDisplayName(displayName string) error {
 }
 
 // It fails if the provided parameters do not meet the application requirements.
-// The returned error is safe for client-side handling.
+// The returned error is safe for client-side message.
 func ValidatePlainPassword(plainPassword string) error {
 	// Prevents from counting runes on a large string
 	if len(plainPassword) > plainPasswordMaxChars*4 {
