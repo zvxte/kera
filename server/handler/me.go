@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/zvxte/kera/hash/sha256"
 	"github.com/zvxte/kera/model"
 	"github.com/zvxte/kera/store"
 )
@@ -17,24 +18,28 @@ type userOut struct {
 	CreationDate time.Time `json:"creation_date"`
 }
 
-func NewMeMux(userStore store.UserStore, logger *log.Logger) *http.ServeMux {
-	h := NewMeHandler(userStore, logger)
+func NewMeMux(
+	userStore store.UserStore, sessionStore store.SessionStore, logger *log.Logger,
+) *http.ServeMux {
+	h := &meHandler{
+		userStore:    userStore,
+		sessionStore: sessionStore,
+		logger:       logger,
+	}
 
 	m := http.NewServeMux()
 	m.HandleFunc("GET /{$}", MakeHandlerFunc(h.Get))
+	m.HandleFunc("POST /logout", MakeHandlerFunc(h.Logout))
 	return m
 }
 
-type MeHandler struct {
-	userStore store.UserStore
-	logger    *log.Logger
+type meHandler struct {
+	userStore    store.UserStore
+	sessionStore store.SessionStore
+	logger       *log.Logger
 }
 
-func NewMeHandler(userStore store.UserStore, logger *log.Logger) *MeHandler {
-	return &MeHandler{userStore: userStore, logger: logger}
-}
-
-func (h *MeHandler) Get(w http.ResponseWriter, r *http.Request) (int, error) {
+func (h *meHandler) Get(w http.ResponseWriter, r *http.Request) (int, error) {
 	userID, ok := r.Context().Value(UserIDContextKey).(model.UUID)
 	if !ok {
 		return http.StatusInternalServerError, ErrInternalServer
@@ -65,4 +70,43 @@ func (h *MeHandler) Get(w http.ResponseWriter, r *http.Request) (int, error) {
 	}
 
 	return http.StatusOK, nil
+}
+
+func (h *meHandler) Logout(w http.ResponseWriter, r *http.Request) (int, error) {
+	unsetSessionIDCookie(w)
+	w.WriteHeader(http.StatusNoContent)
+
+	go func() {
+		sessionID := r.Header.Get(SessionIDHeaderName)
+		if sessionID == "" {
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		hashedSessionID := model.HashedSessionID(sha256.Hash(sessionID))
+
+		err := h.sessionStore.Delete(ctx, hashedSessionID)
+		if err != nil {
+			h.logger.Println(err)
+		}
+	}()
+
+	return http.StatusNoContent, nil
+}
+
+var sessionIDUnsetCookie = &http.Cookie{
+	Name:     "session_id",
+	Value:    "",
+	Path:     "/",
+	Secure:   true,
+	HttpOnly: true,
+	Expires:  time.Time{},
+	MaxAge:   -1,
+	SameSite: http.SameSiteStrictMode,
+}
+
+func unsetSessionIDCookie(w http.ResponseWriter) {
+	http.SetCookie(w, sessionIDUnsetCookie)
 }
