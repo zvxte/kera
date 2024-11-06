@@ -28,7 +28,11 @@ func NewAuthMux(
 	sessionStore store.SessionStore,
 	logger *log.Logger,
 ) *http.ServeMux {
-	h := NewAuthHandler(userStore, sessionStore, logger)
+	h := &authHandler{
+		userStore:    userStore,
+		sessionStore: sessionStore,
+		logger:       logger,
+	}
 
 	m := http.NewServeMux()
 	m.HandleFunc("POST /login", MakeHandlerFunc(h.Login))
@@ -37,21 +41,13 @@ func NewAuthMux(
 	return m
 }
 
-type AuthHandler struct {
+type authHandler struct {
 	userStore    store.UserStore
 	sessionStore store.SessionStore
 	logger       *log.Logger
 }
 
-func NewAuthHandler(
-	userStore store.UserStore,
-	sessionStore store.SessionStore,
-	logger *log.Logger,
-) *AuthHandler {
-	return &AuthHandler{userStore: userStore, sessionStore: sessionStore, logger: logger}
-}
-
-func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) (int, error) {
+func (h *authHandler) Login(w http.ResponseWriter, r *http.Request) (int, error) {
 	if r.Header.Get("Content-Type") != "application/json" {
 		return http.StatusUnsupportedMediaType, ErrUnsupportedMediaType
 	}
@@ -114,11 +110,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) (int, error)
 		Expires:  session.ExpirationDate,
 		SameSite: http.SameSiteStrictMode,
 	})
-
-	return http.StatusOK, nil
+	return http.StatusNoContent, nil
 }
 
-func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) (int, error) {
+func (h *authHandler) Register(w http.ResponseWriter, r *http.Request) (int, error) {
 	if r.Header.Get("Content-Type") != "application/json" {
 		return http.StatusUnsupportedMediaType, ErrUnsupportedMediaType
 	}
