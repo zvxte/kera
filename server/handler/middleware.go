@@ -17,6 +17,11 @@ func SessionMiddleware(next http.Handler, store store.SessionStore) http.Handler
 			return http.StatusUnauthorized, ErrUnauthorized
 		}
 
+		if !model.ValidateSessionID(sessionID) {
+			unsetSessionIDCookie(w)
+			return http.StatusUnauthorized, ErrUnauthorized
+		}
+
 		hashedSessionID := model.HashedSessionID(sha256.Hash(sessionID))
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -28,7 +33,7 @@ func SessionMiddleware(next http.Handler, store store.SessionStore) http.Handler
 		}
 
 		if session == nil || session.ExpirationDate.Before(model.DateNow()) {
-			// TODO: unset the session cookie
+			unsetSessionIDCookie(w)
 			return http.StatusUnauthorized, ErrUnauthorized
 		}
 
