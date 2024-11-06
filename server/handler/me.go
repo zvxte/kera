@@ -55,7 +55,7 @@ func (h *meHandler) Get(w http.ResponseWriter, r *http.Request) (int, error) {
 	}
 
 	if user == nil {
-		// TODO: unset the session cookie
+		unsetSessionIDCookie(w)
 		return http.StatusUnauthorized, ErrUnauthorized
 	}
 
