@@ -10,13 +10,23 @@ import (
 )
 
 const (
-	sessionCharset            = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-	sessionCharsetLength      = len(sessionCharset)
+	sessionIDLength           = 32
+	hashedSessionIDLength     = 32
+	sessionIDCharset          = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	sessionIDCharsetLength    = len(sessionIDCharset)
 	sessionExpirationDuration = time.Hour * 24 * 30
 )
 
+var sessionIDCharsetSet = func() map[rune]bool {
+	s := make(map[rune]bool, sessionIDCharsetLength)
+	for _, r := range sessionIDCharset {
+		s[r] = true
+	}
+	return s
+}()
+
 // HashedSessionID represents a hashed session ID.
-type HashedSessionID [32]byte
+type HashedSessionID [hashedSessionIDLength]byte
 
 // Session represents a user's session in the application.
 type Session struct {
@@ -55,15 +65,30 @@ func LoadSession(hashedID HashedSessionID, creationDate, expirationDate time.Tim
 // NewSessionID returns a new randomly generated session ID as a string.
 // It fails if the system's source of randomness is unavailable.
 func NewSessionID() (string, error) {
-	id := make([]byte, 32)
-	for i := 0; i < 32; i++ {
+	id := make([]byte, sessionIDLength)
+	for i := 0; i < sessionIDLength; i++ {
 		randomNum, err := rand.Int(
-			rand.Reader, big.NewInt(int64(sessionCharsetLength)),
+			rand.Reader, big.NewInt(int64(sessionIDCharsetLength)),
 		)
 		if err != nil {
 			return "", fmt.Errorf("failed to generate session ID: %w", err)
 		}
-		id[i] = sessionCharset[randomNum.Int64()]
+		id[i] = sessionIDCharset[randomNum.Int64()]
 	}
 	return string(id), nil
+}
+
+// ValidateSessionID returns true if the provided sessionID
+// meets the application requirements, else false.
+func ValidateSessionID(sessionID string) bool {
+	if len(sessionID) != sessionIDLength {
+		return false
+	}
+	for _, r := range sessionID {
+		if !sessionIDCharsetSet[r] {
+			return false
+		}
+	}
+
+	return true
 }
