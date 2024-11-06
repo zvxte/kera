@@ -11,7 +11,10 @@ import (
 
 type SessionStore interface {
 	Create(ctx context.Context, session *model.Session, userID model.UUID) error
-	Get(ctx context.Context, hashedSessionID model.HashedSessionID) (*model.Session, model.UUID, error)
+	Get(ctx context.Context, hashedSessionID model.HashedSessionID) (
+		*model.Session, model.UUID, error,
+	)
+	Delete(ctx context.Context, hashedSessionID model.HashedSessionID) error
 }
 
 type SqlSessionStore struct {
@@ -75,4 +78,19 @@ func (s SqlSessionStore) Get(
 	)
 
 	return session, userID, nil
+}
+
+func (s SqlSessionStore) Delete(
+	ctx context.Context, hashedSessionID model.HashedSessionID,
+) error {
+	query := `
+	DELETE FROM sessions
+	WHERE id = $1;
+	`
+	_, err := s.db.ExecContext(ctx, query, hashedSessionID[:])
+	if err != nil {
+		return fmt.Errorf("failed to delete session: %w", err)
+	}
+
+	return nil
 }
