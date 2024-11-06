@@ -113,7 +113,8 @@ func LoadUser(
 	}, nil
 }
 
-// It fails if the provided parameters do not meet the application requirements.
+// ValidateUsername fails if the provided parameters
+// do not meet the application requirements.
 // The returned error is safe for client-side message.
 func ValidateUsername(username string) error {
 	length := len(username)
@@ -137,7 +138,8 @@ func ValidateUsername(username string) error {
 	return nil
 }
 
-// It fails if the provided parameters do not meet the application requirements.
+// ValidateDisplayName fails if the provided parameters
+// do not meet the application requirements.
 // The returned error is safe for client-side message.
 func ValidateDisplayName(displayName string) error {
 	// Prevents from counting runes on a large string
@@ -170,7 +172,8 @@ func ValidateDisplayName(displayName string) error {
 	return nil
 }
 
-// It fails if the provided parameters do not meet the application requirements.
+// ValidatePlainPassword fails if the provided parameters
+// do not meet the application requirements.
 // The returned error is safe for client-side message.
 func ValidatePlainPassword(plainPassword string) error {
 	// Prevents from counting runes on a large string
