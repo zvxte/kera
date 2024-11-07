@@ -28,6 +28,7 @@ var (
 	errDisplayNameInvalid  = errors.New("display name is invalid")
 	errPasswordTooShort    = errors.New("password is too short")
 	errPasswordTooLong     = errors.New("password is too long")
+	errLocationInvalid     = errors.New("location is invalid")
 )
 
 // User represents an application user.
@@ -113,8 +114,8 @@ func LoadUser(
 	}, nil
 }
 
-// ValidateUsername fails if the provided parameters
-// do not meet the application requirements.
+// ValidateUsername fails if the provided username
+// does not meet the application requirements.
 // The returned error is safe for client-side message.
 func ValidateUsername(username string) error {
 	length := len(username)
@@ -138,8 +139,8 @@ func ValidateUsername(username string) error {
 	return nil
 }
 
-// ValidateDisplayName fails if the provided parameters
-// do not meet the application requirements.
+// ValidateDisplayName fails if the provided display name
+// does not meet the application requirements.
 // The returned error is safe for client-side message.
 func ValidateDisplayName(displayName string) error {
 	// Prevents from counting runes on a large string
@@ -172,8 +173,8 @@ func ValidateDisplayName(displayName string) error {
 	return nil
 }
 
-// ValidatePlainPassword fails if the provided parameters
-// do not meet the application requirements.
+// ValidatePlainPassword fails if the provided plain password
+// does not meet the application requirements.
 // The returned error is safe for client-side message.
 func ValidatePlainPassword(plainPassword string) error {
 	// Prevents from counting runes on a large string
@@ -189,5 +190,16 @@ func ValidatePlainPassword(plainPassword string) error {
 		return errPasswordTooLong
 	}
 
+	return nil
+}
+
+// ValidateLocationName fails if the provided location name
+// does not meet the application requirements.
+// The returned error is safe for client-side message.
+func ValidateLocationName(locationName string) error {
+	_, err := time.LoadLocation(locationName)
+	if err != nil {
+		return errLocationInvalid
+	}
 	return nil
 }
