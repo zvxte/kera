@@ -14,6 +14,7 @@ type UserStore interface {
 	Create(ctx context.Context, user *model.User) error
 	IsTaken(ctx context.Context, username string) (bool, error)
 	UpdateDisplayName(ctx context.Context, id model.UUID, displayName string) error
+	UpdateHashedPassword(ctx context.Context, id model.UUID, hashedPassword string) error
 	UpdateLocation(ctx context.Context, id model.UUID, location *time.Location) error
 	GetByUsername(ctx context.Context, username string) (*model.User, error)
 	Get(ctx context.Context, userID model.UUID) (*model.User, error)
@@ -85,6 +86,25 @@ func (s SqlUserStore) UpdateDisplayName(
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update display name: %w", err)
+	}
+
+	return nil
+}
+
+func (s SqlUserStore) UpdateHashedPassword(
+	ctx context.Context, id model.UUID, hashedPassword string,
+) error {
+	query := `
+	UPDATE users
+	SET hashed_password = $1
+	WHERE id = $2;
+	`
+	_, err := s.db.ExecContext(
+		ctx, query,
+		hashedPassword, id,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update hashed password: %w", err)
 	}
 
 	return nil
