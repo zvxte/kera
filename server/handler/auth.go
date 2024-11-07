@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log"
 	"net/http"
 	"time"
@@ -13,14 +12,9 @@ import (
 	"github.com/zvxte/kera/store"
 )
 
-var (
-	ErrUsernameAlreadyTaken = errors.New("username is already taken")
-	ErrInvalidCredentials   = errors.New("username or password is invalid")
-)
-
 type userIn struct {
 	Username      string `json:"username"`
-	PlainPassword string `json:"plain_password"`
+	PlainPassword string `json:"password"`
 }
 
 func NewAuthMux(

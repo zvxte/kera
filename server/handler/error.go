@@ -10,6 +10,11 @@ var (
 	ErrUnauthorized         = errors.New("unauthorized")
 )
 
+var (
+	ErrUsernameAlreadyTaken = errors.New("username is already taken")
+	ErrInvalidCredentials   = errors.New("invalid credentials")
+)
+
 type handlerError struct {
 	StatusCode int    `json:"status_code"`
 	Message    string `json:"message"`
