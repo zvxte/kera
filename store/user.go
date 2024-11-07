@@ -13,6 +13,7 @@ import (
 type UserStore interface {
 	Create(ctx context.Context, user *model.User) error
 	IsTaken(ctx context.Context, username string) (bool, error)
+	UpdateDisplayName(ctx context.Context, id model.UUID, displayName string) error
 	UpdateLocation(ctx context.Context, id model.UUID, location *time.Location) error
 	GetByUsername(ctx context.Context, username string) (*model.User, error)
 	Get(ctx context.Context, userID model.UUID) (*model.User, error)
@@ -70,7 +71,28 @@ func (s SqlUserStore) IsTaken(ctx context.Context, username string) (bool, error
 	return false, fmt.Errorf("failed to query: %w", err)
 }
 
-func (s SqlUserStore) UpdateLocation(ctx context.Context, id model.UUID, location *time.Location) error {
+func (s SqlUserStore) UpdateDisplayName(
+	ctx context.Context, id model.UUID, displayName string,
+) error {
+	query := `
+	UPDATE users
+	SET display_name = $1
+	WHERE id = $2;
+	`
+	_, err := s.db.ExecContext(
+		ctx, query,
+		displayName, id,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update display name: %w", err)
+	}
+
+	return nil
+}
+
+func (s SqlUserStore) UpdateLocation(
+	ctx context.Context, id model.UUID, location *time.Location,
+) error {
 	query := `
 	UPDATE users
 	SET location = $1
@@ -78,7 +100,7 @@ func (s SqlUserStore) UpdateLocation(ctx context.Context, id model.UUID, locatio
 	`
 	_, err := s.db.ExecContext(
 		ctx, query,
-		id, location.String(),
+		location.String(), id,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update location: %w", err)
