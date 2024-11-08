@@ -4,15 +4,11 @@ import "errors"
 
 var (
 	ErrInternalServer       = errors.New("internal server error")
-	ErrMethodNotAllowed     = errors.New("method not allowed")
+	ErrUnauthorized         = errors.New("unauthorized")
 	ErrBadRequest           = errors.New("bad request")
 	ErrUnsupportedMediaType = errors.New("unsupported media type")
-	ErrUnauthorized         = errors.New("unauthorized")
-)
-
-var (
-	ErrUsernameAlreadyTaken = errors.New("username is already taken")
 	ErrInvalidCredentials   = errors.New("invalid credentials")
+	ErrUsernameAlreadyTaken = errors.New("username is already taken")
 )
 
 type handlerError struct {

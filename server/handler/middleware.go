@@ -11,15 +11,15 @@ import (
 )
 
 func SessionMiddleware(next http.Handler, store store.SessionStore) http.Handler {
-	f := func(w http.ResponseWriter, r *http.Request) (int, error) {
+	f := func(w http.ResponseWriter, r *http.Request) response {
 		sessionID := r.Header.Get(SessionIDHeaderName)
 		if sessionID == "" {
-			return http.StatusUnauthorized, ErrUnauthorized
+			return unauthorizedResponse
 		}
 
 		if !model.ValidateSessionID(sessionID) {
 			unsetSessionIDCookie(w)
-			return http.StatusUnauthorized, ErrUnauthorized
+			return unauthorizedResponse
 		}
 
 		hashedSessionID := model.HashedSessionID(sha256.Hash(sessionID))
@@ -29,19 +29,19 @@ func SessionMiddleware(next http.Handler, store store.SessionStore) http.Handler
 
 		session, userID, err := store.Get(ctx, hashedSessionID)
 		if err != nil {
-			return http.StatusInternalServerError, ErrInternalServer
+			return internalServerErrorResponse
 		}
 
 		if session == nil || session.ExpirationDate.Before(model.DateNow()) {
 			unsetSessionIDCookie(w)
-			return http.StatusUnauthorized, ErrUnauthorized
+			return unauthorizedResponse
 		}
 
 		ctx = context.WithValue(r.Context(), UserIDContextKey, userID)
 		r = r.WithContext(ctx)
-
 		next.ServeHTTP(w, r)
-		return http.StatusOK, nil
+
+		return nil
 	}
 
 	return MakeHandlerFunc(f)

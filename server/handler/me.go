@@ -24,10 +24,13 @@ func NewMeMux(
 
 	m := http.NewServeMux()
 	m.HandleFunc("GET /{$}", MakeHandlerFunc(h.get))
+	m.HandleFunc("DELETE /{$}", MakeHandlerFunc(h.delete))
 	m.HandleFunc("PATCH /display-name", MakeHandlerFunc(h.patchDisplayName))
 	m.HandleFunc("PATCH /location", MakeHandlerFunc(h.patchLocation))
 	m.HandleFunc("PATCH /password", MakeHandlerFunc(h.patchPassword))
 	m.HandleFunc("POST /logout", MakeHandlerFunc(h.logout))
+	m.HandleFunc("GET /sessions", MakeHandlerFunc(h.getSessions))
+	m.HandleFunc("DELETE /sessions", MakeHandlerFunc(h.deleteSessions))
 	return m
 }
 
@@ -37,10 +40,10 @@ type meHandler struct {
 	logger       *log.Logger
 }
 
-func (h *meHandler) get(w http.ResponseWriter, r *http.Request) (int, error) {
+func (h *meHandler) get(w http.ResponseWriter, r *http.Request) response {
 	userID, ok := r.Context().Value(UserIDContextKey).(model.UUID)
 	if !ok {
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -49,40 +52,57 @@ func (h *meHandler) get(w http.ResponseWriter, r *http.Request) (int, error) {
 	user, err := h.userStore.Get(ctx, userID)
 	if err != nil {
 		h.logger.Println(err)
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 
 	if user == nil {
 		unsetSessionIDCookie(w)
-		return http.StatusUnauthorized, ErrUnauthorized
+		return unauthorizedResponse
 	}
 
-	err = jsonResponse(w, http.StatusOK, struct {
-		Username     string    `json:"username"`
-		DisplayName  string    `json:"display_name"`
-		Location     string    `json:"location"`
-		CreationDate time.Time `json:"creation_date"`
-	}{
-		Username:     user.Username,
-		DisplayName:  user.DisplayName,
-		Location:     user.Location.String(),
-		CreationDate: user.CreationDate,
-	})
-	if err != nil {
-		return http.StatusInternalServerError, ErrInternalServer
-	}
-
-	return http.StatusOK, nil
+	return newJsonResponse(
+		http.StatusOK,
+		struct {
+			Username     string    `json:"username"`
+			DisplayName  string    `json:"display_name"`
+			Location     string    `json:"location"`
+			CreationDate time.Time `json:"creation_date"`
+		}{
+			Username:     user.Username,
+			DisplayName:  user.DisplayName,
+			Location:     user.Location.String(),
+			CreationDate: user.CreationDate,
+		},
+	)
 }
 
-func (h *meHandler) patchDisplayName(w http.ResponseWriter, r *http.Request) (int, error) {
+func (h *meHandler) delete(w http.ResponseWriter, r *http.Request) response {
+	userID, ok := r.Context().Value(UserIDContextKey).(model.UUID)
+	if !ok {
+		return internalServerErrorResponse
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := h.userStore.Delete(ctx, userID)
+	if err != nil {
+		h.logger.Println(err)
+		return internalServerErrorResponse
+	}
+
+	unsetSessionIDCookie(w)
+	return noContentResponse{}
+}
+
+func (h *meHandler) patchDisplayName(w http.ResponseWriter, r *http.Request) response {
 	if r.Header.Get("Content-Type") != "application/json" {
-		return http.StatusUnsupportedMediaType, ErrUnsupportedMediaType
+		return unsupportedMediaTypeResponse
 	}
 
 	userID, ok := r.Context().Value(UserIDContextKey).(model.UUID)
 	if !ok {
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 
 	var in struct {
@@ -90,12 +110,15 @@ func (h *meHandler) patchDisplayName(w http.ResponseWriter, r *http.Request) (in
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		return http.StatusBadRequest, ErrBadRequest
+		return badRequestResponse
 	}
 
 	err := model.ValidateDisplayName(in.DisplayName)
 	if err != nil {
-		return http.StatusUnprocessableEntity, err
+		return newJsonResponse(
+			http.StatusUnprocessableEntity,
+			newHandlerError(http.StatusUnprocessableEntity, err.Error()),
+		)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -104,20 +127,20 @@ func (h *meHandler) patchDisplayName(w http.ResponseWriter, r *http.Request) (in
 	err = h.userStore.UpdateDisplayName(ctx, userID, in.DisplayName)
 	if err != nil {
 		h.logger.Println(err)
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 
-	return http.StatusNoContent, nil
+	return noContentResponse{}
 }
 
-func (h *meHandler) patchLocation(w http.ResponseWriter, r *http.Request) (int, error) {
+func (h *meHandler) patchLocation(w http.ResponseWriter, r *http.Request) response {
 	if r.Header.Get("Content-Type") != "application/json" {
-		return http.StatusUnsupportedMediaType, ErrUnsupportedMediaType
+		return unsupportedMediaTypeResponse
 	}
 
 	userID, ok := r.Context().Value(UserIDContextKey).(model.UUID)
 	if !ok {
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 
 	var in struct {
@@ -125,12 +148,15 @@ func (h *meHandler) patchLocation(w http.ResponseWriter, r *http.Request) (int, 
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		return http.StatusBadRequest, ErrBadRequest
+		return badRequestResponse
 	}
 
 	err := model.ValidateLocationName(in.Location)
 	if err != nil {
-		return http.StatusUnprocessableEntity, err
+		return newJsonResponse(
+			http.StatusUnprocessableEntity,
+			newHandlerError(http.StatusUnprocessableEntity, err.Error()),
+		)
 	}
 
 	location, _ := time.LoadLocation(in.Location)
@@ -141,20 +167,20 @@ func (h *meHandler) patchLocation(w http.ResponseWriter, r *http.Request) (int, 
 	err = h.userStore.UpdateLocation(ctx, userID, location)
 	if err != nil {
 		h.logger.Println(err)
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 
-	return http.StatusNoContent, nil
+	return noContentResponse{}
 }
 
-func (h *meHandler) patchPassword(w http.ResponseWriter, r *http.Request) (int, error) {
+func (h *meHandler) patchPassword(w http.ResponseWriter, r *http.Request) response {
 	if r.Header.Get("Content-Type") != "application/json" {
-		return http.StatusUnsupportedMediaType, ErrUnsupportedMediaType
+		return unsupportedMediaTypeResponse
 	}
 
 	userID, ok := r.Context().Value(UserIDContextKey).(model.UUID)
 	if !ok {
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 
 	var in struct {
@@ -163,17 +189,20 @@ func (h *meHandler) patchPassword(w http.ResponseWriter, r *http.Request) (int, 
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		return http.StatusBadRequest, ErrBadRequest
+		return badRequestResponse
 	}
 
 	err := model.ValidatePlainPassword(in.NewPlainPassword)
 	if err != nil {
-		return http.StatusUnprocessableEntity, err
+		return newJsonResponse(
+			http.StatusUnprocessableEntity,
+			newHandlerError(http.StatusUnprocessableEntity, err.Error()),
+		)
 	}
 
 	err = model.ValidatePlainPassword(in.PlainPassword)
 	if err != nil {
-		return http.StatusUnprocessableEntity, ErrInvalidCredentials
+		return invalidCredentialsResponse
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -182,37 +211,34 @@ func (h *meHandler) patchPassword(w http.ResponseWriter, r *http.Request) (int, 
 	user, err := h.userStore.Get(ctx, userID)
 	if err != nil {
 		h.logger.Println(err)
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 
 	isValid, err := argon2id.VerifyHash(in.PlainPassword, user.HashedPassword)
 	if err != nil {
 		h.logger.Println(err)
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 	if !isValid {
-		return http.StatusUnprocessableEntity, ErrInvalidCredentials
+		return invalidCredentialsResponse
 	}
 
 	newHashedPassword, err := argon2id.Hash(in.NewPlainPassword, argon2id.DefaultParams)
 	if err != nil {
 		h.logger.Println(err)
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 
 	err = h.userStore.UpdateHashedPassword(ctx, user.ID, newHashedPassword)
 	if err != nil {
 		h.logger.Println(err)
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 
-	return http.StatusNoContent, nil
+	return noContentResponse{}
 }
 
-func (h *meHandler) logout(w http.ResponseWriter, r *http.Request) (int, error) {
-	unsetSessionIDCookie(w)
-	w.WriteHeader(http.StatusNoContent)
-
+func (h *meHandler) logout(w http.ResponseWriter, r *http.Request) response {
 	go func() {
 		sessionID := r.Header.Get(SessionIDHeaderName)
 		if sessionID == "" {
@@ -230,20 +256,48 @@ func (h *meHandler) logout(w http.ResponseWriter, r *http.Request) (int, error) 
 		}
 	}()
 
-	return http.StatusNoContent, nil
+	unsetSessionIDCookie(w)
+	return noContentResponse{}
 }
 
-var sessionIDUnsetCookie = &http.Cookie{
-	Name:     "session_id",
-	Value:    "",
-	Path:     "/",
-	Secure:   true,
-	HttpOnly: true,
-	Expires:  time.Time{},
-	MaxAge:   -1,
-	SameSite: http.SameSiteStrictMode,
+func (h *meHandler) getSessions(w http.ResponseWriter, r *http.Request) response {
+	userID, ok := r.Context().Value(UserIDContextKey).(model.UUID)
+	if !ok {
+		return internalServerErrorResponse
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	count, err := h.sessionStore.Count(ctx, userID)
+	if err != nil {
+		h.logger.Println(err)
+		return internalServerErrorResponse
+	}
+
+	return newJsonResponse(
+		http.StatusOK,
+		struct {
+			Count uint `json:"count"`
+		}{Count: count},
+	)
 }
 
-func unsetSessionIDCookie(w http.ResponseWriter) {
-	http.SetCookie(w, sessionIDUnsetCookie)
+func (h *meHandler) deleteSessions(w http.ResponseWriter, r *http.Request) response {
+	userID, ok := r.Context().Value(UserIDContextKey).(model.UUID)
+	if !ok {
+		return internalServerErrorResponse
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := h.sessionStore.DeleteAll(ctx, userID)
+	if err != nil {
+		h.logger.Println(err)
+		return internalServerErrorResponse
+	}
+
+	unsetSessionIDCookie(w)
+	return noContentResponse{}
 }

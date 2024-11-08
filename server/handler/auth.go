@@ -41,22 +41,22 @@ type authHandler struct {
 	logger       *log.Logger
 }
 
-func (h *authHandler) Login(w http.ResponseWriter, r *http.Request) (int, error) {
+func (h *authHandler) Login(w http.ResponseWriter, r *http.Request) response {
 	if r.Header.Get("Content-Type") != "application/json" {
-		return http.StatusUnsupportedMediaType, ErrUnsupportedMediaType
+		return unsupportedMediaTypeResponse
 	}
 
 	var in userIn
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		return http.StatusBadRequest, ErrBadRequest
+		return badRequestResponse
 	}
 
 	if err := model.ValidateUsername(in.Username); err != nil {
-		return http.StatusUnprocessableEntity, ErrInvalidCredentials
+		return invalidCredentialsResponse
 	}
 
 	if err := model.ValidatePlainPassword(in.PlainPassword); err != nil {
-		return http.StatusUnprocessableEntity, ErrInvalidCredentials
+		return invalidCredentialsResponse
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -65,26 +65,26 @@ func (h *authHandler) Login(w http.ResponseWriter, r *http.Request) (int, error)
 	user, err := h.userStore.GetByUsername(ctx, in.Username)
 	if err != nil {
 		h.logger.Println(err)
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 
 	if user == nil {
-		return http.StatusUnprocessableEntity, ErrInvalidCredentials
+		return invalidCredentialsResponse
 	}
 
 	isValid, err := argon2id.VerifyHash(in.PlainPassword, user.HashedPassword)
 	if err != nil {
 		h.logger.Println(err)
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 
 	if !isValid {
-		return http.StatusUnprocessableEntity, ErrInvalidCredentials
+		return invalidCredentialsResponse
 	}
 
 	sessionID, err := model.NewSessionID()
 	if err != nil {
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 
 	session := model.NewSession(sessionID)
@@ -92,35 +92,31 @@ func (h *authHandler) Login(w http.ResponseWriter, r *http.Request) (int, error)
 	err = h.sessionStore.Create(ctx, session, user.ID)
 	if err != nil {
 		h.logger.Println(err)
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_id",
-		Value:    sessionID,
-		Path:     "/",
-		Secure:   true,
-		HttpOnly: true,
-		Expires:  session.ExpirationDate,
-		SameSite: http.SameSiteStrictMode,
-	})
-	return http.StatusNoContent, nil
+	setSessionIDCookie(w, sessionID, session.ExpirationDate)
+
+	return noContentResponse{}
 }
 
-func (h *authHandler) Register(w http.ResponseWriter, r *http.Request) (int, error) {
+func (h *authHandler) Register(w http.ResponseWriter, r *http.Request) response {
 	if r.Header.Get("Content-Type") != "application/json" {
-		return http.StatusUnsupportedMediaType, ErrUnsupportedMediaType
+		return unsupportedMediaTypeResponse
 	}
 
 	var in userIn
 	err := json.NewDecoder(r.Body).Decode(&in)
 	if err != nil {
-		return http.StatusBadRequest, ErrBadRequest
+		return badRequestResponse
 	}
 
 	user, err := model.NewUser(in.Username, in.PlainPassword)
 	if err != nil {
-		return http.StatusUnprocessableEntity, err
+		return newJsonResponse(
+			http.StatusUnprocessableEntity,
+			newHandlerError(http.StatusUnprocessableEntity, err.Error()),
+		)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -129,17 +125,17 @@ func (h *authHandler) Register(w http.ResponseWriter, r *http.Request) (int, err
 	isTaken, err := h.userStore.IsTaken(ctx, user.Username)
 	if err != nil {
 		h.logger.Println(err)
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 	if isTaken {
-		return http.StatusConflict, ErrUsernameAlreadyTaken
+		return usernameAlreadyTakenResponse
 	}
 
 	err = h.userStore.Create(ctx, user)
 	if err != nil {
 		h.logger.Println(err)
-		return http.StatusInternalServerError, ErrInternalServer
+		return internalServerErrorResponse
 	}
 
-	return http.StatusCreated, nil
+	return noContentResponse{}
 }
