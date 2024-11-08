@@ -15,6 +15,8 @@ type SessionStore interface {
 		*model.Session, model.UUID, error,
 	)
 	Delete(ctx context.Context, hashedSessionID model.HashedSessionID) error
+	DeleteAll(ctx context.Context, userID model.UUID) error
+	Count(ctx context.Context, userID model.UUID) (uint, error)
 }
 
 type SqlSessionStore struct {
@@ -93,4 +95,38 @@ func (s SqlSessionStore) Delete(
 	}
 
 	return nil
+}
+
+func (s SqlSessionStore) DeleteAll(
+	ctx context.Context, userID model.UUID,
+) error {
+	query := `
+	DELETE FROM sessions
+	WHERE user_id = $1;
+	`
+	_, err := s.db.ExecContext(ctx, query, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete all sessions: %w", err)
+	}
+
+	return nil
+}
+
+func (s SqlSessionStore) Count(
+	ctx context.Context, userID model.UUID,
+) (uint, error) {
+	query := `
+	SELECT COUNT(id)
+	FROM sessions
+	WHERE user_id = $1;
+	`
+	row := s.db.QueryRowContext(ctx, query, userID)
+
+	var count uint
+	err := row.Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count sessions: %w", err)
+	}
+
+	return count, nil
 }
