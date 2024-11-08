@@ -18,6 +18,7 @@ type UserStore interface {
 	UpdateLocation(ctx context.Context, id model.UUID, location *time.Location) error
 	GetByUsername(ctx context.Context, username string) (*model.User, error)
 	Get(ctx context.Context, userID model.UUID) (*model.User, error)
+	Delete(ctx context.Context, userID model.UUID) error
 }
 
 type SqlUserStore struct {
@@ -217,4 +218,17 @@ func (s SqlUserStore) Get(ctx context.Context, userID model.UUID) (*model.User, 
 	}
 
 	return user, nil
+}
+
+func (s SqlUserStore) Delete(ctx context.Context, userID model.UUID) error {
+	query := `
+	DELETE FROM users
+	WHERE id = $1;
+	`
+	_, err := s.db.ExecContext(ctx, query, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	return nil
 }
