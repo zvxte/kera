@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS habits(
     id UUID NOT NULL PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES users(id),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     status SMALLINT NOT NULL REFERENCES habit_statuses(id),
     title VARCHAR(64) NOT NULL,
     description VARCHAR(256) NOT NULL,
