@@ -12,7 +12,7 @@ import (
 
 func SessionMiddleware(next http.Handler, store store.SessionStore) http.Handler {
 	f := func(w http.ResponseWriter, r *http.Request) response {
-		sessionID := r.Header.Get(SessionIDHeaderName)
+		sessionID := r.Header.Get(sessionIDHeaderName)
 		if sessionID == "" {
 			return unauthorizedResponse
 		}
@@ -37,7 +37,7 @@ func SessionMiddleware(next http.Handler, store store.SessionStore) http.Handler
 			return unauthorizedResponse
 		}
 
-		ctx = context.WithValue(r.Context(), UserIDContextKey, userID)
+		ctx = context.WithValue(r.Context(), userIDContextKey, userID)
 		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 

@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	SessionIDHeaderName = "session_id"
-	UserIDContextKey    = "user_id"
+	sessionIDHeaderName = "session_id"
+	userIDContextKey    = "user_id"
 )
 
 type handlerFuncWithResponse func(http.ResponseWriter, *http.Request) response

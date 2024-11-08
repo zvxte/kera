@@ -41,7 +41,7 @@ type meHandler struct {
 }
 
 func (h *meHandler) get(w http.ResponseWriter, r *http.Request) response {
-	userID, ok := r.Context().Value(UserIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
@@ -77,7 +77,7 @@ func (h *meHandler) get(w http.ResponseWriter, r *http.Request) response {
 }
 
 func (h *meHandler) delete(w http.ResponseWriter, r *http.Request) response {
-	userID, ok := r.Context().Value(UserIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
@@ -100,7 +100,7 @@ func (h *meHandler) patchDisplayName(w http.ResponseWriter, r *http.Request) res
 		return unsupportedMediaTypeResponse
 	}
 
-	userID, ok := r.Context().Value(UserIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
@@ -138,7 +138,7 @@ func (h *meHandler) patchLocation(w http.ResponseWriter, r *http.Request) respon
 		return unsupportedMediaTypeResponse
 	}
 
-	userID, ok := r.Context().Value(UserIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
@@ -178,7 +178,7 @@ func (h *meHandler) patchPassword(w http.ResponseWriter, r *http.Request) respon
 		return unsupportedMediaTypeResponse
 	}
 
-	userID, ok := r.Context().Value(UserIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
@@ -240,7 +240,7 @@ func (h *meHandler) patchPassword(w http.ResponseWriter, r *http.Request) respon
 
 func (h *meHandler) logout(w http.ResponseWriter, r *http.Request) response {
 	go func() {
-		sessionID := r.Header.Get(SessionIDHeaderName)
+		sessionID := r.Header.Get(sessionIDHeaderName)
 		if sessionID == "" {
 			return
 		}
@@ -261,7 +261,7 @@ func (h *meHandler) logout(w http.ResponseWriter, r *http.Request) response {
 }
 
 func (h *meHandler) getSessions(w http.ResponseWriter, r *http.Request) response {
-	userID, ok := r.Context().Value(UserIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
@@ -284,7 +284,7 @@ func (h *meHandler) getSessions(w http.ResponseWriter, r *http.Request) response
 }
 
 func (h *meHandler) deleteSessions(w http.ResponseWriter, r *http.Request) response {
-	userID, ok := r.Context().Value(UserIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
