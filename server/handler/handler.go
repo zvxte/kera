@@ -9,9 +9,9 @@ const (
 	UserIDContextKey    = "user_id"
 )
 
-type HandlerFuncWithResponse func(http.ResponseWriter, *http.Request) response
+type handlerFuncWithResponse func(http.ResponseWriter, *http.Request) response
 
-func MakeHandlerFunc(f HandlerFuncWithResponse) http.HandlerFunc {
+func makeHandlerFunc(f handlerFuncWithResponse) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		response := f(w, r)
 		if response != nil {

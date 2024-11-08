@@ -23,14 +23,14 @@ func NewMeMux(
 	}
 
 	m := http.NewServeMux()
-	m.HandleFunc("GET /{$}", MakeHandlerFunc(h.get))
-	m.HandleFunc("DELETE /{$}", MakeHandlerFunc(h.delete))
-	m.HandleFunc("PATCH /display-name", MakeHandlerFunc(h.patchDisplayName))
-	m.HandleFunc("PATCH /location", MakeHandlerFunc(h.patchLocation))
-	m.HandleFunc("PATCH /password", MakeHandlerFunc(h.patchPassword))
-	m.HandleFunc("POST /logout", MakeHandlerFunc(h.logout))
-	m.HandleFunc("GET /sessions", MakeHandlerFunc(h.getSessions))
-	m.HandleFunc("DELETE /sessions", MakeHandlerFunc(h.deleteSessions))
+	m.HandleFunc("GET /{$}", makeHandlerFunc(h.get))
+	m.HandleFunc("DELETE /{$}", makeHandlerFunc(h.delete))
+	m.HandleFunc("PATCH /display-name", makeHandlerFunc(h.patchDisplayName))
+	m.HandleFunc("PATCH /location", makeHandlerFunc(h.patchLocation))
+	m.HandleFunc("PATCH /password", makeHandlerFunc(h.patchPassword))
+	m.HandleFunc("POST /logout", makeHandlerFunc(h.logout))
+	m.HandleFunc("GET /sessions", makeHandlerFunc(h.getSessions))
+	m.HandleFunc("DELETE /sessions", makeHandlerFunc(h.deleteSessions))
 	return m
 }
 

@@ -44,5 +44,5 @@ func SessionMiddleware(next http.Handler, store store.SessionStore) http.Handler
 		return nil
 	}
 
-	return MakeHandlerFunc(f)
+	return makeHandlerFunc(f)
 }

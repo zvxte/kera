@@ -29,8 +29,8 @@ func NewAuthMux(
 	}
 
 	m := http.NewServeMux()
-	m.HandleFunc("POST /login", MakeHandlerFunc(h.Login))
-	m.HandleFunc("POST /register", MakeHandlerFunc(h.Register))
+	m.HandleFunc("POST /login", makeHandlerFunc(h.Login))
+	m.HandleFunc("POST /register", makeHandlerFunc(h.Register))
 
 	return m
 }
