@@ -48,13 +48,22 @@ func NewServer() (*Server, error) {
 		return nil, fmt.Errorf("failed to create Server: %w", err)
 	}
 
+	habitStore, err := store.NewSqlHabitStore(sqlDatabase.DB)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Server: %w", err)
+	}
+
 	authMux := handler.NewAuthMux(userStore, sessionStore, logger)
 	meMux := handler.NewMeMux(userStore, sessionStore, logger)
+	habitsMux := handler.NewHabitsMux(habitStore, logger)
 
 	mux := http.NewServeMux()
 	mux.Handle("/auth/", http.StripPrefix("/auth", authMux))
 	mux.Handle("/me/", handler.SessionMiddleware(
 		http.StripPrefix("/me", meMux), sessionStore),
+	)
+	mux.Handle("/habits/", handler.SessionMiddleware(
+		http.StripPrefix("/habits", habitsMux), sessionStore),
 	)
 	return &Server{mux: mux}, nil
 }
