@@ -20,6 +20,7 @@ func NewHabitsMux(habitStore store.HabitStore, logger *log.Logger) *http.ServeMu
 	m := http.NewServeMux()
 	m.HandleFunc("POST /{$}", makeHandlerFunc(h.create))
 	m.HandleFunc("GET /{$}", makeHandlerFunc(h.getAll))
+	m.HandleFunc("DELETE /{id}", makeHandlerFunc(h.delete))
 	m.HandleFunc("PATCH /{id}/title", makeHandlerFunc(h.patchTitle))
 	m.HandleFunc("PATCH /{id}/description", makeHandlerFunc(h.patchDescription))
 	m.HandleFunc("PATCH /{id}/end", makeHandlerFunc(h.end))
@@ -121,6 +122,31 @@ func (h *habitHandler) getAll(w http.ResponseWriter, r *http.Request) response {
 		http.StatusOK,
 		outs,
 	)
+}
+
+func (h *habitHandler) delete(w http.ResponseWriter, r *http.Request) response {
+	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
+	if !ok {
+		return internalServerErrorResponse
+	}
+
+	habitID, err := model.ParseUUID(
+		r.PathValue("id"),
+	)
+	if err != nil {
+		return badRequestResponse
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = h.habitStore.Delete(ctx, habitID, userID)
+	if err != nil {
+		h.logger.Println(err)
+		return internalServerErrorResponse
+	}
+
+	return noContentResponse{}
 }
 
 func (h *habitHandler) patchTitle(w http.ResponseWriter, r *http.Request) response {
