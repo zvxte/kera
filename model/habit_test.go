@@ -87,13 +87,13 @@ func TestNewTrackedWeekDays(t *testing.T) {
 		{
 			"Valid",
 			[]WeekDay{Monday, Sunday},
-			TrackedWeekDays(Monday | Sunday),
+			TrackedWeekDays((1 << Monday) | (1 << Sunday)),
 			false,
 		},
 		{
 			"Valid",
 			[]WeekDay{Tuesday},
-			TrackedWeekDays(Tuesday),
+			TrackedWeekDays(1 << Tuesday),
 			false,
 		},
 		{
@@ -151,7 +151,7 @@ func TestValidateTitle(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := validateTitle(test.title)
+			err := ValidateTitle(test.title)
 			if (err != nil) != test.shouldErr {
 				t.Errorf(
 					"validateTitle(%q), error=%v, shouldErr=%v",
@@ -181,7 +181,7 @@ func TestValidateDescription(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := validateDescription(test.description)
+			err := ValidateDescription(test.description)
 			if (err != nil) != test.shouldErr {
 				t.Errorf(
 					"validateDescription(%q), error=%v, shouldErr=%v",
@@ -232,6 +232,42 @@ func TestValidateTrackedWeekDays(t *testing.T) {
 				t.Errorf(
 					"validateTrackedWeekDays(%v), error=%v, shouldErr=%v",
 					test.trackedWeekDays, err, test.shouldErr,
+				)
+			}
+		})
+	}
+}
+
+func TestValidateHabitStatus(t *testing.T) {
+	tests := []struct {
+		name      string
+		status    HabitStatus
+		shouldErr bool
+	}{
+		{
+			"Valid: active",
+			HabitActive,
+			false,
+		},
+		{
+			"Valid: ended",
+			HabitEnded,
+			false,
+		},
+		{
+			"Invalid: out of range",
+			HabitStatus(2),
+			true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := validateHabitStatus(test.status)
+			if (err != nil) != test.shouldErr {
+				t.Errorf(
+					"validateHabitStatus(%q), error=%v, shouldErr=%v",
+					test.status, err, test.shouldErr,
 				)
 			}
 		})

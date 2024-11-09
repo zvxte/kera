@@ -1,9 +1,8 @@
 package model
 
-// TODO: Documentation
-
 import (
 	"errors"
+	"math/bits"
 	"strings"
 	"time"
 	"unicode"
@@ -18,6 +17,11 @@ const (
 
 	trackedWeekDaysMin = 1
 	trackedWeekDaysMax = (1 << 7) - 1
+
+	weekDayMax = 6
+
+	habitStatusMin = 0
+	habitStatusMax = 1
 )
 
 var (
@@ -34,17 +38,18 @@ var (
 	)
 )
 
+// Habit represents an application user's habit.
 type Habit struct {
 	ID              UUID
 	Status          HabitStatus
 	Title           string
 	Description     string
 	TrackedWeekDays TrackedWeekDays
-	History         HabitHistory
 	StartDate       time.Time
 	EndDate         time.Time
 }
 
+// HabitStatus represents status of a habit.
 type HabitStatus uint8
 
 const (
@@ -52,12 +57,31 @@ const (
 	HabitEnded
 )
 
+// TrackedWeekDays represents days of the week that are tracked in a bitmap,
+// where each bit (0 - untracked, 1 - tracked) represents a day
+// starting from Monday as the first bit (LSB).
+// The eighth bit should always be unset.
 type TrackedWeekDays uint8
 
+// WeekDays returns []WeekDay representing only the days that are tracked
+// within the TrackedWeekDays bitmap.
+// WeekDays always returns a non-nil and non-empty slice.
+func (d TrackedWeekDays) WeekDays() []WeekDay {
+	weekDays := make([]WeekDay, 0, bits.OnesCount8(uint8(d)))
+	for i := 0; i <= weekDayMax; i++ {
+		bit := (d >> i) & 1
+		if bit == 1 {
+			weekDays = append(weekDays, WeekDay(i))
+		}
+	}
+	return weekDays
+}
+
+// WeekDay represents a day of the week.
 type WeekDay uint8
 
 const (
-	Monday WeekDay = 1 << iota
+	Monday WeekDay = iota
 	Tuesday
 	Wednesday
 	Thursday
@@ -66,13 +90,17 @@ const (
 	Sunday
 )
 
+// HabitHistory represents a history of a habit.
 type HabitHistory []HabitDay
 
+// HabitDay represents a single day record in a history of a habit.
+// It contains the status and the date of that record.
 type HabitDay struct {
 	Status HabitDayStatus
 	Date   time.Time
 }
 
+// HabitDayStatus represents a status of a single day record in a history of a habit.
 type HabitDayStatus uint8
 
 const (
@@ -82,14 +110,20 @@ const (
 	DayPending
 )
 
+// NewHabit returns a new *Habit.
+// It fails if the provided parameters do not meet the application requirements.
+// The returned error is safe for client-side message.
+// The status field is set to HabitActive.
+// The startDate field is set to the current date in UTC.
+// The endDate field is set to the zero value of the time.Time type.
 func NewHabit(
 	title, description string,
 	weekDays ...WeekDay,
 ) (*Habit, error) {
-	if err := validateTitle(title); err != nil {
+	if err := ValidateTitle(title); err != nil {
 		return nil, err
 	}
-	if err := validateDescription(description); err != nil {
+	if err := ValidateDescription(description); err != nil {
 		return nil, err
 	}
 
@@ -109,7 +143,39 @@ func NewHabit(
 
 	endDate := time.Time{}
 
-	history := HabitHistory{}
+	return &Habit{
+		ID:              id,
+		Status:          status,
+		Title:           title,
+		Description:     description,
+		TrackedWeekDays: trackedWeekDays,
+		StartDate:       startDate,
+		EndDate:         endDate,
+	}, nil
+}
+
+// LoadHabit returns a *Habit.
+// It fails if the provided parameters do not meet the application requirements.
+// The returned error is safe for client-side message.
+func LoadHabit(
+	id UUID, status HabitStatus, title, description string,
+	trackedWeekDays TrackedWeekDays, startDate, endDate time.Time,
+) (*Habit, error) {
+	if err := validateHabitStatus(status); err != nil {
+		return nil, err
+	}
+
+	if err := ValidateTitle(title); err != nil {
+		return nil, err
+	}
+
+	if err := ValidateDescription(description); err != nil {
+		return nil, err
+	}
+
+	if err := validateTrackedWeekDays(trackedWeekDays); err != nil {
+		return nil, err
+	}
 
 	return &Habit{
 		ID:              id,
@@ -117,16 +183,18 @@ func NewHabit(
 		Title:           title,
 		Description:     description,
 		TrackedWeekDays: trackedWeekDays,
-		History:         history,
 		StartDate:       startDate,
 		EndDate:         endDate,
 	}, nil
 }
 
+// newTrackedWeekDays returns new TrackedWeekDays value.
+// It fails if the provided parameters are invalid days of the week
+// or no parameters are provided.
 func newTrackedWeekDays(weekDays ...WeekDay) (TrackedWeekDays, error) {
 	var trackedWeekDays TrackedWeekDays
 	for _, day := range weekDays {
-		trackedWeekDays |= TrackedWeekDays(day)
+		trackedWeekDays |= TrackedWeekDays(1 << day)
 	}
 
 	err := validateTrackedWeekDays(trackedWeekDays)
@@ -137,7 +205,10 @@ func newTrackedWeekDays(weekDays ...WeekDay) (TrackedWeekDays, error) {
 	return trackedWeekDays, nil
 }
 
-func validateTitle(title string) error {
+// ValidateTitle fails if the provided title
+// does not meet the application requirements.
+// The returned error is safe for client-side message.
+func ValidateTitle(title string) error {
 	// Prevents from counting runes on a large string
 	if len(title) > titleMaxChars*4 {
 		return errTitleTooLong
@@ -168,7 +239,10 @@ func validateTitle(title string) error {
 	return nil
 }
 
-func validateDescription(description string) error {
+// ValidateDescription fails if the provided description
+// does not meet the application requirements.
+// The returned error is safe for client-side message.
+func ValidateDescription(description string) error {
 	// Prevents from counting runes on a large string
 	if len(description) > descriptionMaxChars*4 {
 		return errDescriptionTooLong
@@ -188,6 +262,9 @@ func validateDescription(description string) error {
 	return nil
 }
 
+// validateTrackedWeekDays fails if the provided tracked week days
+// do not meet the application requirements.
+// The returned error is safe for client-side message.
 func validateTrackedWeekDays(trackedWeekDays TrackedWeekDays) error {
 	if trackedWeekDays < trackedWeekDaysMin {
 		return errTrackedWeekDaysEmpty
@@ -196,5 +273,15 @@ func validateTrackedWeekDays(trackedWeekDays TrackedWeekDays) error {
 		return errTrackedWeekDaysInvalid
 	}
 
+	return nil
+}
+
+// validateHabitStatus fails if the provided status
+// does not meet the application requirements.
+// The returned error is safe for client-side message.
+func validateHabitStatus(status HabitStatus) error {
+	if status < habitStatusMin || status > habitStatusMax {
+		return errInternalServer
+	}
 	return nil
 }
