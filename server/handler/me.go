@@ -29,7 +29,7 @@ func NewMeMux(
 	m.HandleFunc("PATCH /location", makeHandlerFunc(h.patchLocation))
 	m.HandleFunc("PATCH /password", makeHandlerFunc(h.patchPassword))
 	m.HandleFunc("POST /logout", makeHandlerFunc(h.logout))
-	m.HandleFunc("GET /sessions", makeHandlerFunc(h.getSessions))
+	m.HandleFunc("GET /sessions", makeHandlerFunc(h.getSessionsCount))
 	m.HandleFunc("DELETE /sessions", makeHandlerFunc(h.deleteSessions))
 	return m
 }
@@ -260,7 +260,7 @@ func (h *meHandler) logout(w http.ResponseWriter, r *http.Request) response {
 	return noContentResponse{}
 }
 
-func (h *meHandler) getSessions(w http.ResponseWriter, r *http.Request) response {
+func (h *meHandler) getSessionsCount(w http.ResponseWriter, r *http.Request) response {
 	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
 	if !ok {
 		return internalServerErrorResponse
