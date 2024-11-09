@@ -23,6 +23,7 @@ type HabitStore interface {
 		ctx context.Context, id model.UUID, description string, userID model.UUID,
 	) error
 	End(ctx context.Context, id model.UUID, userID model.UUID) error
+	Delete(ctx context.Context, id model.UUID, userID model.UUID) error
 	// GetHistory(
 	// 	ctx context.Context,
 	// 	habitID model.UUID,
@@ -154,7 +155,9 @@ func (s SqlHabitStore) UpdateDescription(
 	return nil
 }
 
-func (s SqlHabitStore) End(ctx context.Context, id model.UUID, userID model.UUID) error {
+func (s SqlHabitStore) End(
+	ctx context.Context, id model.UUID, userID model.UUID,
+) error {
 	query := `
 	UPDATE habits
 	SET status = $1, end_date = $2
@@ -166,6 +169,21 @@ func (s SqlHabitStore) End(ctx context.Context, id model.UUID, userID model.UUID
 	)
 	if err != nil {
 		return fmt.Errorf("failed to end habit: %w", err)
+	}
+
+	return nil
+}
+
+func (s SqlHabitStore) Delete(
+	ctx context.Context, id model.UUID, userID model.UUID,
+) error {
+	query := `
+	DELETE FROM habits
+	WHERE id = $1 AND user_id = $2;
+	`
+	_, err := s.db.ExecContext(ctx, query, id, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete habit: %w", err)
 	}
 
 	return nil
