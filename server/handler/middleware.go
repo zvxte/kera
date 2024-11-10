@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"github.com/zvxte/kera/hash/sha256"
-	"github.com/zvxte/kera/model"
+	"github.com/zvxte/kera/model/date"
+	"github.com/zvxte/kera/model/session"
 	"github.com/zvxte/kera/store"
 )
 
@@ -17,12 +18,12 @@ func SessionMiddleware(next http.Handler, store store.SessionStore) http.Handler
 			return unauthorizedResponse
 		}
 
-		if !model.ValidateSessionID(sessionID) {
+		if !session.ValidateID(sessionID) {
 			unsetSessionIDCookie(w)
 			return unauthorizedResponse
 		}
 
-		hashedSessionID := model.HashedSessionID(sha256.Hash(sessionID))
+		hashedSessionID := session.HashedID(sha256.Hash(sessionID))
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -32,7 +33,7 @@ func SessionMiddleware(next http.Handler, store store.SessionStore) http.Handler
 			return internalServerErrorResponse
 		}
 
-		if session == nil || session.ExpirationDate.Before(model.DateNow()) {
+		if session == nil || session.ExpirationDate.Before(date.Now()) {
 			unsetSessionIDCookie(w)
 			return unauthorizedResponse
 		}

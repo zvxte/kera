@@ -6,17 +6,19 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/zvxte/kera/model"
+	"github.com/zvxte/kera/model/date"
+	"github.com/zvxte/kera/model/session"
+	"github.com/zvxte/kera/model/uuid"
 )
 
 type SessionStore interface {
-	Create(ctx context.Context, session *model.Session, userID model.UUID) error
-	Get(ctx context.Context, hashedSessionID model.HashedSessionID) (
-		*model.Session, model.UUID, error,
+	Create(ctx context.Context, session *session.Session, userID uuid.UUID) error
+	Get(ctx context.Context, hashedID session.HashedID) (
+		*session.Session, uuid.UUID, error,
 	)
-	Delete(ctx context.Context, hashedSessionID model.HashedSessionID) error
-	DeleteAll(ctx context.Context, userID model.UUID) error
-	Count(ctx context.Context, userID model.UUID) (uint, error)
+	Delete(ctx context.Context, hashedID session.HashedID) error
+	DeleteAll(ctx context.Context, userID uuid.UUID) error
+	Count(ctx context.Context, userID uuid.UUID) (uint, error)
 }
 
 type SqlSessionStore struct {
@@ -31,7 +33,7 @@ func NewSqlSessionStore(db *sql.DB) (*SqlSessionStore, error) {
 }
 
 func (s SqlSessionStore) Create(
-	ctx context.Context, session *model.Session, userID model.UUID,
+	ctx context.Context, session *session.Session, userID uuid.UUID,
 ) error {
 	query := `
 	INSERT INTO sessions(id, user_id, creation_date, expiration_date)
@@ -39,7 +41,8 @@ func (s SqlSessionStore) Create(
 	`
 	_, err := s.db.ExecContext(
 		ctx, query,
-		session.HashedID[:], userID, session.CreationDate, session.ExpirationDate,
+		session.HashedID[:], userID, time.Time(session.CreationDate),
+		time.Time(session.ExpirationDate),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
@@ -49,47 +52,46 @@ func (s SqlSessionStore) Create(
 }
 
 func (s SqlSessionStore) Get(
-	ctx context.Context, hashedSessionID model.HashedSessionID,
-) (*model.Session, model.UUID, error) {
+	ctx context.Context, hashedID session.HashedID,
+) (*session.Session, uuid.UUID, error) {
 	query := `
 	SELECT user_id, creation_date, expiration_date
 	FROM sessions
 	WHERE id = $1;
 	`
-	row := s.db.QueryRowContext(ctx, query, hashedSessionID[:])
+	row := s.db.QueryRowContext(ctx, query, hashedID[:])
 
 	var rawUserID string
 	var creation_date, expiration_date time.Time
 	err := row.Scan(&rawUserID, &creation_date, &expiration_date)
 
 	if err == sql.ErrNoRows {
-		return nil, model.UUID{}, nil
+		return nil, uuid.UUID{}, nil
 	}
 
 	if err != nil {
-		return nil, model.UUID{}, fmt.Errorf("failed to get session: %w", err)
+		return nil, uuid.UUID{}, fmt.Errorf("failed to get session: %w", err)
 	}
 
-	userID, err := model.ParseUUID(rawUserID)
+	userID, err := uuid.Parse(rawUserID)
 	if err != nil {
-		return nil, model.UUID{}, fmt.Errorf("failed to get session: %w", err)
+		return nil, uuid.UUID{}, fmt.Errorf("failed to get session: %w", err)
 	}
 
-	session := model.LoadSession(
-		hashedSessionID, creation_date, expiration_date,
+	session := session.Load(
+		hashedID, date.Load(creation_date),
+		date.Load(expiration_date),
 	)
 
 	return session, userID, nil
 }
 
-func (s SqlSessionStore) Delete(
-	ctx context.Context, hashedSessionID model.HashedSessionID,
-) error {
+func (s SqlSessionStore) Delete(ctx context.Context, hashedID session.HashedID) error {
 	query := `
 	DELETE FROM sessions
 	WHERE id = $1;
 	`
-	_, err := s.db.ExecContext(ctx, query, hashedSessionID[:])
+	_, err := s.db.ExecContext(ctx, query, hashedID[:])
 	if err != nil {
 		return fmt.Errorf("failed to delete session: %w", err)
 	}
@@ -98,7 +100,7 @@ func (s SqlSessionStore) Delete(
 }
 
 func (s SqlSessionStore) DeleteAll(
-	ctx context.Context, userID model.UUID,
+	ctx context.Context, userID uuid.UUID,
 ) error {
 	query := `
 	DELETE FROM sessions
@@ -112,9 +114,7 @@ func (s SqlSessionStore) DeleteAll(
 	return nil
 }
 
-func (s SqlSessionStore) Count(
-	ctx context.Context, userID model.UUID,
-) (uint, error) {
+func (s SqlSessionStore) Count(ctx context.Context, userID uuid.UUID) (uint, error) {
 	query := `
 	SELECT COUNT(id)
 	FROM sessions

@@ -7,18 +7,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zvxte/kera/model"
+	"github.com/zvxte/kera/model/date"
+	"github.com/zvxte/kera/model/user"
+	"github.com/zvxte/kera/model/uuid"
 )
 
 type UserStore interface {
-	Create(ctx context.Context, user *model.User) error
+	Create(ctx context.Context, user *user.User) error
 	IsTaken(ctx context.Context, username string) (bool, error)
-	UpdateDisplayName(ctx context.Context, id model.UUID, displayName string) error
-	UpdateHashedPassword(ctx context.Context, id model.UUID, hashedPassword string) error
-	UpdateLocation(ctx context.Context, id model.UUID, location *time.Location) error
-	GetByUsername(ctx context.Context, username string) (*model.User, error)
-	Get(ctx context.Context, userID model.UUID) (*model.User, error)
-	Delete(ctx context.Context, userID model.UUID) error
+	UpdateDisplayName(ctx context.Context, id uuid.UUID, displayName string) error
+	UpdateHashedPassword(ctx context.Context, id uuid.UUID, hashedPassword string) error
+	UpdateLocation(ctx context.Context, id uuid.UUID, location *time.Location) error
+	GetByUsername(ctx context.Context, username string) (*user.User, error)
+	Get(ctx context.Context, userID uuid.UUID) (*user.User, error)
+	Delete(ctx context.Context, userID uuid.UUID) error
 }
 
 type SqlUserStore struct {
@@ -32,7 +34,7 @@ func NewSqlUserStore(db *sql.DB) (*SqlUserStore, error) {
 	return &SqlUserStore{db}, nil
 }
 
-func (s SqlUserStore) Create(ctx context.Context, user *model.User) error {
+func (s SqlUserStore) Create(ctx context.Context, user *user.User) error {
 	query := `
 	INSERT INTO users(id, username, username_lower, display_name, hashed_password, location, creation_date)
 	VALUES ($1, $2, $3, $4, $5, $6, $7);
@@ -40,7 +42,7 @@ func (s SqlUserStore) Create(ctx context.Context, user *model.User) error {
 	_, err := s.db.ExecContext(
 		ctx, query,
 		user.ID, user.Username, strings.ToLower(user.Username), user.DisplayName,
-		user.HashedPassword, user.Location.String(), user.CreationDate,
+		user.HashedPassword, user.Location.String(), time.Time(user.CreationDate),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
@@ -74,7 +76,7 @@ func (s SqlUserStore) IsTaken(ctx context.Context, username string) (bool, error
 }
 
 func (s SqlUserStore) UpdateDisplayName(
-	ctx context.Context, id model.UUID, displayName string,
+	ctx context.Context, id uuid.UUID, displayName string,
 ) error {
 	query := `
 	UPDATE users
@@ -93,7 +95,7 @@ func (s SqlUserStore) UpdateDisplayName(
 }
 
 func (s SqlUserStore) UpdateHashedPassword(
-	ctx context.Context, id model.UUID, hashedPassword string,
+	ctx context.Context, id uuid.UUID, hashedPassword string,
 ) error {
 	query := `
 	UPDATE users
@@ -112,7 +114,7 @@ func (s SqlUserStore) UpdateHashedPassword(
 }
 
 func (s SqlUserStore) UpdateLocation(
-	ctx context.Context, id model.UUID, location *time.Location,
+	ctx context.Context, id uuid.UUID, location *time.Location,
 ) error {
 	query := `
 	UPDATE users
@@ -130,7 +132,9 @@ func (s SqlUserStore) UpdateLocation(
 	return nil
 }
 
-func (s SqlUserStore) GetByUsername(ctx context.Context, username string) (*model.User, error) {
+func (s SqlUserStore) GetByUsername(
+	ctx context.Context, username string,
+) (*user.User, error) {
 	query := `
 	SELECT id, username, display_name, hashed_password, location, creation_date
 	FROM users
@@ -143,7 +147,8 @@ func (s SqlUserStore) GetByUsername(ctx context.Context, username string) (*mode
 	var rawUserID, dbUsername, displayName, hashedPassword, locationName string
 	var creationDate time.Time
 	err := row.Scan(
-		&rawUserID, &dbUsername, &displayName, &hashedPassword, &locationName, &creationDate,
+		&rawUserID, &dbUsername, &displayName,
+		&hashedPassword, &locationName, &creationDate,
 	)
 
 	if err == sql.ErrNoRows {
@@ -154,7 +159,7 @@ func (s SqlUserStore) GetByUsername(ctx context.Context, username string) (*mode
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	id, err := model.ParseUUID(rawUserID)
+	id, err := uuid.Parse(rawUserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
@@ -168,8 +173,9 @@ func (s SqlUserStore) GetByUsername(ctx context.Context, username string) (*mode
 		}
 	}
 
-	user, err := model.LoadUser(
-		id, dbUsername, displayName, hashedPassword, location, creationDate,
+	user, err := user.Load(
+		id, dbUsername, displayName, hashedPassword,
+		location, date.Load(creationDate),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
@@ -178,7 +184,7 @@ func (s SqlUserStore) GetByUsername(ctx context.Context, username string) (*mode
 	return user, nil
 }
 
-func (s SqlUserStore) Get(ctx context.Context, userID model.UUID) (*model.User, error) {
+func (s SqlUserStore) Get(ctx context.Context, userID uuid.UUID) (*user.User, error) {
 	query := `
 	SELECT username, display_name, hashed_password, location, creation_date
 	FROM users
@@ -209,8 +215,9 @@ func (s SqlUserStore) Get(ctx context.Context, userID model.UUID) (*model.User, 
 		}
 	}
 
-	user, err := model.LoadUser(
-		userID, dbUsername, displayName, hashedPassword, location, creationDate,
+	user, err := user.Load(
+		userID, dbUsername, displayName, hashedPassword,
+		location, date.Load(creationDate),
 	)
 
 	if err != nil {
@@ -220,7 +227,7 @@ func (s SqlUserStore) Get(ctx context.Context, userID model.UUID) (*model.User, 
 	return user, nil
 }
 
-func (s SqlUserStore) Delete(ctx context.Context, userID model.UUID) error {
+func (s SqlUserStore) Delete(ctx context.Context, userID uuid.UUID) error {
 	query := `
 	DELETE FROM users
 	WHERE id = $1;

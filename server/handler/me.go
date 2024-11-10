@@ -9,7 +9,9 @@ import (
 
 	"github.com/zvxte/kera/hash/argon2id"
 	"github.com/zvxte/kera/hash/sha256"
-	"github.com/zvxte/kera/model"
+	"github.com/zvxte/kera/model/session"
+	"github.com/zvxte/kera/model/user"
+	"github.com/zvxte/kera/model/uuid"
 	"github.com/zvxte/kera/store"
 )
 
@@ -41,7 +43,7 @@ type meHandler struct {
 }
 
 func (h *meHandler) get(w http.ResponseWriter, r *http.Request) response {
-	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
@@ -71,13 +73,13 @@ func (h *meHandler) get(w http.ResponseWriter, r *http.Request) response {
 			Username:     user.Username,
 			DisplayName:  user.DisplayName,
 			Location:     user.Location.String(),
-			CreationDate: user.CreationDate,
+			CreationDate: time.Time(user.CreationDate),
 		},
 	)
 }
 
 func (h *meHandler) delete(w http.ResponseWriter, r *http.Request) response {
-	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
@@ -100,7 +102,7 @@ func (h *meHandler) patchDisplayName(w http.ResponseWriter, r *http.Request) res
 		return unsupportedMediaTypeResponse
 	}
 
-	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
@@ -113,7 +115,7 @@ func (h *meHandler) patchDisplayName(w http.ResponseWriter, r *http.Request) res
 		return badRequestResponse
 	}
 
-	err := model.ValidateDisplayName(in.DisplayName)
+	err := user.ValidateDisplayName(in.DisplayName)
 	if err != nil {
 		return newJsonResponse(
 			http.StatusUnprocessableEntity,
@@ -138,7 +140,7 @@ func (h *meHandler) patchLocation(w http.ResponseWriter, r *http.Request) respon
 		return unsupportedMediaTypeResponse
 	}
 
-	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
@@ -151,7 +153,7 @@ func (h *meHandler) patchLocation(w http.ResponseWriter, r *http.Request) respon
 		return badRequestResponse
 	}
 
-	err := model.ValidateLocationName(in.Location)
+	err := user.ValidateLocationName(in.Location)
 	if err != nil {
 		return newJsonResponse(
 			http.StatusUnprocessableEntity,
@@ -178,7 +180,7 @@ func (h *meHandler) patchPassword(w http.ResponseWriter, r *http.Request) respon
 		return unsupportedMediaTypeResponse
 	}
 
-	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
@@ -192,7 +194,7 @@ func (h *meHandler) patchPassword(w http.ResponseWriter, r *http.Request) respon
 		return badRequestResponse
 	}
 
-	err := model.ValidatePlainPassword(in.NewPlainPassword)
+	err := user.ValidatePlainPassword(in.NewPlainPassword)
 	if err != nil {
 		return newJsonResponse(
 			http.StatusUnprocessableEntity,
@@ -200,7 +202,7 @@ func (h *meHandler) patchPassword(w http.ResponseWriter, r *http.Request) respon
 		)
 	}
 
-	err = model.ValidatePlainPassword(in.PlainPassword)
+	err = user.ValidatePlainPassword(in.PlainPassword)
 	if err != nil {
 		return invalidCredentialsResponse
 	}
@@ -248,7 +250,7 @@ func (h *meHandler) logout(w http.ResponseWriter, r *http.Request) response {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		hashedSessionID := model.HashedSessionID(sha256.Hash(sessionID))
+		hashedSessionID := session.HashedID(sha256.Hash(sessionID))
 
 		err := h.sessionStore.Delete(ctx, hashedSessionID)
 		if err != nil {
@@ -261,7 +263,7 @@ func (h *meHandler) logout(w http.ResponseWriter, r *http.Request) response {
 }
 
 func (h *meHandler) getSessionsCount(w http.ResponseWriter, r *http.Request) response {
-	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
@@ -284,7 +286,7 @@ func (h *meHandler) getSessionsCount(w http.ResponseWriter, r *http.Request) res
 }
 
 func (h *meHandler) deleteSessions(w http.ResponseWriter, r *http.Request) response {
-	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}

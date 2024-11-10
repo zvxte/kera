@@ -7,7 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/zvxte/kera/model"
+	"github.com/zvxte/kera/model/habit"
+	"github.com/zvxte/kera/model/uuid"
 	"github.com/zvxte/kera/store"
 )
 
@@ -33,7 +34,7 @@ type habitHandler struct {
 }
 
 func (h *habitHandler) create(w http.ResponseWriter, r *http.Request) response {
-	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
@@ -41,14 +42,14 @@ func (h *habitHandler) create(w http.ResponseWriter, r *http.Request) response {
 	var in struct {
 		Title       string          `json:"title"`
 		Description string          `json:"description"`
-		WeekDays    []model.WeekDay `json:"week_days"`
+		WeekDays    []habit.WeekDay `json:"week_days"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		return badRequestResponse
 	}
 
-	habit, err := model.NewHabit(
+	habit, err := habit.New(
 		in.Title, in.Description, in.WeekDays...,
 	)
 	if err != nil {
@@ -71,7 +72,7 @@ func (h *habitHandler) create(w http.ResponseWriter, r *http.Request) response {
 }
 
 func (h *habitHandler) getAll(w http.ResponseWriter, r *http.Request) response {
-	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
@@ -86,13 +87,13 @@ func (h *habitHandler) getAll(w http.ResponseWriter, r *http.Request) response {
 	}
 
 	type out struct {
-		ID          string            `json:"id"`
-		Status      model.HabitStatus `json:"status"`
-		Title       string            `json:"title"`
-		Description string            `json:"description"`
-		WeekDays    []uint            `json:"week_days"`
-		StartDate   time.Time         `json:"start_date"`
-		EndDate     time.Time         `json:"end_date"`
+		ID          string       `json:"id"`
+		Status      habit.Status `json:"status"`
+		Title       string       `json:"title"`
+		Description string       `json:"description"`
+		WeekDays    []uint       `json:"week_days"`
+		StartDate   time.Time    `json:"start_date"`
+		EndDate     time.Time    `json:"end_date"`
 	}
 
 	outs := make([]out, len(habits))
@@ -113,8 +114,8 @@ func (h *habitHandler) getAll(w http.ResponseWriter, r *http.Request) response {
 			Title:       habit.Title,
 			Description: habit.Description,
 			WeekDays:    weekDaysOut,
-			StartDate:   habit.StartDate,
-			EndDate:     habit.EndDate,
+			StartDate:   time.Time(habit.StartDate),
+			EndDate:     time.Time(habit.EndDate),
 		}
 	}
 
@@ -125,12 +126,12 @@ func (h *habitHandler) getAll(w http.ResponseWriter, r *http.Request) response {
 }
 
 func (h *habitHandler) delete(w http.ResponseWriter, r *http.Request) response {
-	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
 
-	habitID, err := model.ParseUUID(
+	habitID, err := uuid.Parse(
 		r.PathValue("id"),
 	)
 	if err != nil {
@@ -150,12 +151,12 @@ func (h *habitHandler) delete(w http.ResponseWriter, r *http.Request) response {
 }
 
 func (h *habitHandler) patchTitle(w http.ResponseWriter, r *http.Request) response {
-	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
 
-	habitID, err := model.ParseUUID(
+	habitID, err := uuid.Parse(
 		r.PathValue("id"),
 	)
 	if err != nil {
@@ -170,7 +171,7 @@ func (h *habitHandler) patchTitle(w http.ResponseWriter, r *http.Request) respon
 		return badRequestResponse
 	}
 
-	if err := model.ValidateTitle(in.Title); err != nil {
+	if err := habit.ValidateTitle(in.Title); err != nil {
 		return newJsonResponse(
 			http.StatusUnprocessableEntity,
 			newHandlerError(http.StatusUnprocessableEntity, err.Error()),
@@ -190,12 +191,12 @@ func (h *habitHandler) patchTitle(w http.ResponseWriter, r *http.Request) respon
 }
 
 func (h *habitHandler) patchDescription(w http.ResponseWriter, r *http.Request) response {
-	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
 
-	id, err := model.ParseUUID(
+	id, err := uuid.Parse(
 		r.PathValue("id"),
 	)
 	if err != nil {
@@ -210,7 +211,7 @@ func (h *habitHandler) patchDescription(w http.ResponseWriter, r *http.Request) 
 		return badRequestResponse
 	}
 
-	if err := model.ValidateDescription(in.Description); err != nil {
+	if err := habit.ValidateDescription(in.Description); err != nil {
 		return newJsonResponse(
 			http.StatusUnprocessableEntity,
 			newHandlerError(http.StatusUnprocessableEntity, err.Error()),
@@ -230,12 +231,12 @@ func (h *habitHandler) patchDescription(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *habitHandler) end(w http.ResponseWriter, r *http.Request) response {
-	userID, ok := r.Context().Value(userIDContextKey).(model.UUID)
+	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
 	if !ok {
 		return internalServerErrorResponse
 	}
 
-	id, err := model.ParseUUID(
+	id, err := uuid.Parse(
 		r.PathValue("id"),
 	)
 	if err != nil {

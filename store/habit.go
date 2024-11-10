@@ -6,24 +6,26 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/zvxte/kera/model"
+	"github.com/zvxte/kera/model/date"
+	"github.com/zvxte/kera/model/habit"
+	"github.com/zvxte/kera/model/uuid"
 )
 
-type HistoryParams struct {
-	date time.Time
-}
+// type HistoryParams struct {
+// 	date time.Time
+// }
 
 type HabitStore interface {
-	Create(ctx context.Context, habit *model.Habit, userID model.UUID) error
-	GetAll(ctx context.Context, userID model.UUID) ([]*model.Habit, error)
+	Create(ctx context.Context, habit *habit.Habit, userID uuid.UUID) error
+	GetAll(ctx context.Context, userID uuid.UUID) ([]*habit.Habit, error)
 	UpdateTitle(
-		ctx context.Context, id model.UUID, title string, userID model.UUID,
+		ctx context.Context, id uuid.UUID, title string, userID uuid.UUID,
 	) error
 	UpdateDescription(
-		ctx context.Context, id model.UUID, description string, userID model.UUID,
+		ctx context.Context, id uuid.UUID, description string, userID uuid.UUID,
 	) error
-	End(ctx context.Context, id model.UUID, userID model.UUID) error
-	Delete(ctx context.Context, id model.UUID, userID model.UUID) error
+	End(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
+	Delete(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 	// GetHistory(
 	// 	ctx context.Context,
 	// 	habitID model.UUID,
@@ -44,7 +46,7 @@ func NewSqlHabitStore(db *sql.DB) (*SqlHabitStore, error) {
 }
 
 func (s SqlHabitStore) Create(
-	ctx context.Context, habit *model.Habit, userID model.UUID,
+	ctx context.Context, habit *habit.Habit, userID uuid.UUID,
 ) error {
 	query := `
 	INSERT INTO habits(id, user_id, status, title, description,
@@ -54,7 +56,7 @@ func (s SqlHabitStore) Create(
 	_, err := s.db.ExecContext(
 		ctx, query,
 		habit.ID, userID, habit.Status, habit.Title, habit.Description,
-		habit.TrackedWeekDays, habit.StartDate, habit.EndDate,
+		habit.TrackedWeekDays, time.Time(habit.StartDate), time.Time(habit.EndDate),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create habit: %w", err)
@@ -64,8 +66,8 @@ func (s SqlHabitStore) Create(
 }
 
 func (s SqlHabitStore) GetAll(
-	ctx context.Context, userID model.UUID,
-) ([]*model.Habit, error) {
+	ctx context.Context, userID uuid.UUID,
+) ([]*habit.Habit, error) {
 	query := `
 	SELECT id, status, title, description,
 		   tracked_week_days, start_date, end_date
@@ -79,11 +81,11 @@ func (s SqlHabitStore) GetAll(
 	defer rows.Close()
 
 	var rawID, title, description string
-	var status model.HabitStatus
-	var trackedWeekDays model.TrackedWeekDays
+	var status habit.Status
+	var trackedWeekDays habit.TrackedWeekDays
 	var startDate, endDate time.Time
 
-	var habits []*model.Habit
+	var habits []*habit.Habit
 
 	for rows.Next() {
 		err = rows.Scan(
@@ -94,14 +96,14 @@ func (s SqlHabitStore) GetAll(
 			return nil, fmt.Errorf("failed to get all habits: %w", err)
 		}
 
-		id, err := model.ParseUUID(rawID)
+		id, err := uuid.Parse(rawID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get all habits: %w", err)
 		}
 
-		habit, err := model.LoadHabit(
-			id, status, title, description,
-			trackedWeekDays, startDate, endDate,
+		habit, err := habit.Load(
+			id, status, title, description, trackedWeekDays,
+			date.Load(startDate), date.Load(endDate),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get all habits: %w", err)
@@ -118,7 +120,7 @@ func (s SqlHabitStore) GetAll(
 }
 
 func (s SqlHabitStore) UpdateTitle(
-	ctx context.Context, id model.UUID, title string, userID model.UUID,
+	ctx context.Context, id uuid.UUID, title string, userID uuid.UUID,
 ) error {
 	query := `
 	UPDATE habits
@@ -137,7 +139,7 @@ func (s SqlHabitStore) UpdateTitle(
 }
 
 func (s SqlHabitStore) UpdateDescription(
-	ctx context.Context, id model.UUID, description string, userID model.UUID,
+	ctx context.Context, id uuid.UUID, description string, userID uuid.UUID,
 ) error {
 	query := `
 	UPDATE habits
@@ -156,7 +158,7 @@ func (s SqlHabitStore) UpdateDescription(
 }
 
 func (s SqlHabitStore) End(
-	ctx context.Context, id model.UUID, userID model.UUID,
+	ctx context.Context, id uuid.UUID, userID uuid.UUID,
 ) error {
 	query := `
 	UPDATE habits
@@ -165,7 +167,7 @@ func (s SqlHabitStore) End(
 	`
 	_, err := s.db.ExecContext(
 		ctx, query,
-		model.HabitEnded, model.DateNow(), model.HabitActive, id, userID,
+		habit.Ended, time.Time(date.Now()), habit.Active, id, userID,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to end habit: %w", err)
@@ -175,7 +177,7 @@ func (s SqlHabitStore) End(
 }
 
 func (s SqlHabitStore) Delete(
-	ctx context.Context, id model.UUID, userID model.UUID,
+	ctx context.Context, id uuid.UUID, userID uuid.UUID,
 ) error {
 	query := `
 	DELETE FROM habits

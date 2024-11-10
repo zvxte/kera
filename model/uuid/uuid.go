@@ -1,4 +1,4 @@
-package model
+package uuid
 
 import (
 	"fmt"
@@ -9,9 +9,9 @@ import (
 // UUID represents an unique identifier used for model IDs.
 type UUID [16]byte
 
-// NewUUIDv7 returns a new version 7 UUID.
+// NewV7 returns a new version 7 UUID.
 // It fails if the system's source of randomness is unavailable.
-func NewUUIDv7() (UUID, error) {
+func NewV7() (UUID, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
 		return UUID{}, fmt.Errorf("failed to generate UUIDv7: %w", err)
@@ -19,9 +19,9 @@ func NewUUIDv7() (UUID, error) {
 	return UUID(id), nil
 }
 
-// ParseUUID returns UUID parsed from given string.
+// Parse returns UUID parsed from given string.
 // It fails if the given string is an invalid UUID.
-func ParseUUID(value string) (UUID, error) {
+func Parse(value string) (UUID, error) {
 	id, err := uuid.Parse(value)
 	if err != nil {
 		return UUID{}, fmt.Errorf("failed to parse UUID: %w", err)

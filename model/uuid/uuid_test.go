@@ -1,14 +1,14 @@
-package model
+package uuid
 
 import "testing"
 
-func TestNewUUIDv7(t *testing.T) {
-	if _, err := NewUUIDv7(); err != nil {
+func TestNewV7(t *testing.T) {
+	if _, err := NewV7(); err != nil {
 		t.Error(err)
 	}
 }
 
-func TestParseUUID(t *testing.T) {
+func TestParse(t *testing.T) {
 	tests := []struct {
 		name      string
 		value     string
@@ -21,7 +21,7 @@ func TestParseUUID(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := ParseUUID(test.value)
+			_, err := Parse(test.value)
 			if (err != nil) != test.shouldErr {
 				t.Errorf(
 					"ParseUUID(%q), error=%v, shouldErr=%v",
@@ -60,8 +60,8 @@ func TestString(t *testing.T) {
 			result := test.id.String()
 			if result != test.shouldBe {
 				t.Errorf(
-					"UUID.String(), got=%q, expected=%q",
-					result, test.shouldBe,
+					"UUID(%q).String(), got=%q, expected=%q",
+					test.id, result, test.shouldBe,
 				)
 			}
 		})

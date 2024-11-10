@@ -8,7 +8,8 @@ import (
 	"time"
 
 	"github.com/zvxte/kera/hash/argon2id"
-	"github.com/zvxte/kera/model"
+	"github.com/zvxte/kera/model/session"
+	"github.com/zvxte/kera/model/user"
 	"github.com/zvxte/kera/store"
 )
 
@@ -31,7 +32,6 @@ func NewAuthMux(
 	m := http.NewServeMux()
 	m.HandleFunc("POST /login", makeHandlerFunc(h.Login))
 	m.HandleFunc("POST /register", makeHandlerFunc(h.Register))
-
 	return m
 }
 
@@ -51,11 +51,11 @@ func (h *authHandler) Login(w http.ResponseWriter, r *http.Request) response {
 		return badRequestResponse
 	}
 
-	if err := model.ValidateUsername(in.Username); err != nil {
+	if err := user.ValidateUsername(in.Username); err != nil {
 		return invalidCredentialsResponse
 	}
 
-	if err := model.ValidatePlainPassword(in.PlainPassword); err != nil {
+	if err := user.ValidatePlainPassword(in.PlainPassword); err != nil {
 		return invalidCredentialsResponse
 	}
 
@@ -77,17 +77,16 @@ func (h *authHandler) Login(w http.ResponseWriter, r *http.Request) response {
 		h.logger.Println(err)
 		return internalServerErrorResponse
 	}
-
 	if !isValid {
 		return invalidCredentialsResponse
 	}
 
-	sessionID, err := model.NewSessionID()
+	sessionID, err := session.NewID()
 	if err != nil {
 		return internalServerErrorResponse
 	}
 
-	session := model.NewSession(sessionID)
+	session := session.New(sessionID)
 
 	err = h.sessionStore.Create(ctx, session, user.ID)
 	if err != nil {
@@ -95,8 +94,7 @@ func (h *authHandler) Login(w http.ResponseWriter, r *http.Request) response {
 		return internalServerErrorResponse
 	}
 
-	setSessionIDCookie(w, sessionID, session.ExpirationDate)
-
+	setSessionIDCookie(w, sessionID, time.Time(session.ExpirationDate))
 	return noContentResponse{}
 }
 
@@ -111,7 +109,7 @@ func (h *authHandler) Register(w http.ResponseWriter, r *http.Request) response 
 		return badRequestResponse
 	}
 
-	user, err := model.NewUser(in.Username, in.PlainPassword)
+	user, err := user.New(in.Username, in.PlainPassword)
 	if err != nil {
 		return newJsonResponse(
 			http.StatusUnprocessableEntity,

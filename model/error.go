@@ -2,6 +2,8 @@ package model
 
 import "errors"
 
-// errInternalServer represents an internal server error.
-// It's used as a safe error whenever unexpected failure occured.
-var errInternalServer = errors.New("internal server error")
+// ErrUnexpected represents an unexpected error that occurred.
+// It's used as an error that can be safe for a client-side message.
+var ErrUnexpected = errors.New(
+	"an unexpected error occurred, please try again later",
+)

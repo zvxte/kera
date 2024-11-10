@@ -1,15 +1,8 @@
-package model
+package session
 
 import "testing"
 
-func TestNewSessionID(t *testing.T) {
-	s, err := NewSessionID()
-	if err != nil {
-		t.Error(err, s)
-	}
-}
-
-func TestValidateSessionID(t *testing.T) {
+func TestValidateID(t *testing.T) {
 	tests := []struct {
 		name      string
 		sessionID string
@@ -39,10 +32,10 @@ func TestValidateSessionID(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := ValidateSessionID(test.sessionID)
+			got := ValidateID(test.sessionID)
 			if got != test.expected {
 				t.Errorf(
-					"ValidateSessionID(%q), got=%v, expected=%v",
+					"ValidateID(%q), got=%v, expected=%v",
 					test.sessionID, got, test.expected,
 				)
 			}
