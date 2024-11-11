@@ -2,7 +2,6 @@ package user
 
 import (
 	"strings"
-	"time"
 	"unicode"
 	"unicode/utf8"
 )
@@ -122,16 +121,5 @@ func ValidatePlainPassword(plainPassword string) error {
 		return ErrPasswordTooLong
 	}
 
-	return nil
-}
-
-// ValidateLocationName fails if the provided location name
-// does not meet the application requirements.
-// The returned error is safe for client-side message.
-func ValidateLocationName(locationName string) error {
-	_, err := time.LoadLocation(locationName)
-	if err != nil {
-		return ErrLocationInvalid
-	}
 	return nil
 }

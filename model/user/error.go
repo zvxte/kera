@@ -11,5 +11,4 @@ var (
 	ErrDisplayNameInvalid  = errors.New("display name is invalid")
 	ErrPasswordTooShort    = errors.New("password is too short")
 	ErrPasswordTooLong     = errors.New("password is too long")
-	ErrLocationInvalid     = errors.New("location is invalid")
 )

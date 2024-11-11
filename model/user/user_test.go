@@ -2,7 +2,6 @@ package user
 
 import (
 	"testing"
-	"time"
 
 	"github.com/zvxte/kera/model/date"
 	"github.com/zvxte/kera/model/uuid"
@@ -55,7 +54,6 @@ func TestLoad(t *testing.T) {
 		username       string
 		displayName    string
 		hashedPassword string
-		location       *time.Location
 		creationDate   date.Date
 		shouldErr      bool
 	}{
@@ -65,7 +63,6 @@ func TestLoad(t *testing.T) {
 			"username",
 			"display name",
 			"hashed password",
-			time.UTC,
 			date.Now(),
 			false,
 		},
@@ -75,7 +72,6 @@ func TestLoad(t *testing.T) {
 			"aaa",
 			"display name",
 			"hashed password",
-			time.UTC,
 			date.Now(),
 			true,
 		},
@@ -85,17 +81,6 @@ func TestLoad(t *testing.T) {
 			"username",
 			"  display name  ",
 			"hashed password",
-			time.UTC,
-			date.Now(),
-			true,
-		},
-		{
-			"Invalid: location",
-			uuid.UUID{},
-			"username",
-			"display name",
-			"hashed password",
-			nil,
 			date.Now(),
 			true,
 		},
@@ -105,14 +90,13 @@ func TestLoad(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			_, err := Load(
 				test.id, test.username, test.displayName,
-				test.hashedPassword, test.location, test.creationDate,
+				test.hashedPassword, test.creationDate,
 			)
 			if (err != nil) != test.shouldErr {
 				t.Errorf(
-					"Load(%q, %q, %q, %q, %q, %q), error=%v, shouldErr=%v",
+					"Load(%q, %q, %q, %q, %q), error=%v, shouldErr=%v",
 					test.id, test.username, test.displayName,
-					test.hashedPassword, test.location, test.creationDate,
-					err, test.shouldErr,
+					test.hashedPassword, test.creationDate, err, test.shouldErr,
 				)
 			}
 		})
