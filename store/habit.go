@@ -44,7 +44,7 @@ func NewSqlHabitStore(db *sql.DB) (*SqlHabitStore, error) {
 func (s SqlHabitStore) Create(
 	ctx context.Context, habit *habit.Habit, userID uuid.UUID,
 ) error {
-	query := `
+	const query = `
 	INSERT INTO habits(id, user_id, status, title, description,
 					   tracked_week_days, start_date, end_date)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
@@ -64,7 +64,7 @@ func (s SqlHabitStore) Create(
 func (s SqlHabitStore) GetAll(
 	ctx context.Context, userID uuid.UUID,
 ) ([]*habit.Habit, error) {
-	query := `
+	const query = `
 	SELECT id, status, title, description,
 		   tracked_week_days, start_date, end_date
 	FROM habits
@@ -118,7 +118,7 @@ func (s SqlHabitStore) GetAll(
 func (s SqlHabitStore) UpdateTitle(
 	ctx context.Context, id uuid.UUID, title string, userID uuid.UUID,
 ) error {
-	query := `
+	const query = `
 	UPDATE habits
 	SET title = $1
 	WHERE id = $2 AND user_id = $3;
@@ -137,7 +137,7 @@ func (s SqlHabitStore) UpdateTitle(
 func (s SqlHabitStore) UpdateDescription(
 	ctx context.Context, id uuid.UUID, description string, userID uuid.UUID,
 ) error {
-	query := `
+	const query = `
 	UPDATE habits
 	SET description = $1
 	WHERE id = $2 AND user_id = $3;
@@ -156,7 +156,7 @@ func (s SqlHabitStore) UpdateDescription(
 func (s SqlHabitStore) End(
 	ctx context.Context, id uuid.UUID, userID uuid.UUID,
 ) error {
-	query := `
+	const query = `
 	UPDATE habits
 	SET status = $1, end_date = $2
 	WHERE status = $3 AND id = $4 AND user_id = $5;
@@ -175,7 +175,7 @@ func (s SqlHabitStore) End(
 func (s SqlHabitStore) Delete(
 	ctx context.Context, id uuid.UUID, userID uuid.UUID,
 ) error {
-	query := `
+	const query = `
 	DELETE FROM habits
 	WHERE id = $1 AND user_id = $2;
 	`
@@ -190,7 +190,7 @@ func (s SqlHabitStore) Delete(
 func (s SqlHabitStore) UpdateHistory(
 	ctx context.Context, id uuid.UUID, date date.Date, userID uuid.UUID,
 ) error {
-	query := `
+	const query = `
 	INSERT INTO habit_histories(habit_id, date, days)
 	VALUES ($1, $2, $3)
 	ON CONFLICT (habit_id, date)
@@ -217,7 +217,7 @@ func (s SqlHabitStore) UpdateHistory(
 func (s SqlHabitStore) GetMonthHistory(
 	ctx context.Context, id uuid.UUID, historyDate date.Date, userID uuid.UUID,
 ) (habit.History, error) {
-	query := `
+	const query = `
 	SELECT habit_histories.days,
 		   habits.tracked_week_days,
 		   habits.start_date,

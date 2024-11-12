@@ -35,7 +35,7 @@ func NewSqlSessionStore(db *sql.DB) (*SqlSessionStore, error) {
 func (s SqlSessionStore) Create(
 	ctx context.Context, session *session.Session, userID uuid.UUID,
 ) error {
-	query := `
+	const query = `
 	INSERT INTO sessions(id, user_id, creation_date, expiration_date)
 	VALUES ($1, $2, $3, $4);
 	`
@@ -54,7 +54,7 @@ func (s SqlSessionStore) Create(
 func (s SqlSessionStore) Get(
 	ctx context.Context, hashedID session.HashedID,
 ) (*session.Session, uuid.UUID, error) {
-	query := `
+	const query = `
 	SELECT user_id, creation_date, expiration_date
 	FROM sessions
 	WHERE id = $1;
@@ -87,7 +87,7 @@ func (s SqlSessionStore) Get(
 }
 
 func (s SqlSessionStore) Delete(ctx context.Context, hashedID session.HashedID) error {
-	query := `
+	const query = `
 	DELETE FROM sessions
 	WHERE id = $1;
 	`
@@ -102,7 +102,7 @@ func (s SqlSessionStore) Delete(ctx context.Context, hashedID session.HashedID) 
 func (s SqlSessionStore) DeleteAll(
 	ctx context.Context, userID uuid.UUID,
 ) error {
-	query := `
+	const query = `
 	DELETE FROM sessions
 	WHERE user_id = $1;
 	`
@@ -115,7 +115,7 @@ func (s SqlSessionStore) DeleteAll(
 }
 
 func (s SqlSessionStore) Count(ctx context.Context, userID uuid.UUID) (uint, error) {
-	query := `
+	const query = `
 	SELECT COUNT(id)
 	FROM sessions
 	WHERE user_id = $1;

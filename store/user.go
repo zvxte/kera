@@ -34,7 +34,7 @@ func NewSqlUserStore(db *sql.DB) (*SqlUserStore, error) {
 }
 
 func (s SqlUserStore) Create(ctx context.Context, user *user.User) error {
-	query := `
+	const query = `
 	INSERT INTO users(id, username, username_lower,
 					  display_name, hashed_password, creation_date)
 	VALUES ($1, $2, $3, $4, $5, $6);
@@ -52,7 +52,7 @@ func (s SqlUserStore) Create(ctx context.Context, user *user.User) error {
 }
 
 func (s SqlUserStore) IsTaken(ctx context.Context, username string) (bool, error) {
-	query := `
+	const query = `
 	SELECT 1
 	FROM users
 	WHERE username_lower = $1;
@@ -78,7 +78,7 @@ func (s SqlUserStore) IsTaken(ctx context.Context, username string) (bool, error
 func (s SqlUserStore) UpdateDisplayName(
 	ctx context.Context, id uuid.UUID, displayName string,
 ) error {
-	query := `
+	const query = `
 	UPDATE users
 	SET display_name = $1
 	WHERE id = $2;
@@ -97,7 +97,7 @@ func (s SqlUserStore) UpdateDisplayName(
 func (s SqlUserStore) UpdateHashedPassword(
 	ctx context.Context, id uuid.UUID, hashedPassword string,
 ) error {
-	query := `
+	const query = `
 	UPDATE users
 	SET hashed_password = $1
 	WHERE id = $2;
@@ -116,7 +116,7 @@ func (s SqlUserStore) UpdateHashedPassword(
 func (s SqlUserStore) GetByUsername(
 	ctx context.Context, username string,
 ) (*user.User, error) {
-	query := `
+	const query = `
 	SELECT id, username, display_name, hashed_password, creation_date
 	FROM users
 	WHERE username_lower = $1;
@@ -157,7 +157,7 @@ func (s SqlUserStore) GetByUsername(
 }
 
 func (s SqlUserStore) Get(ctx context.Context, userID uuid.UUID) (*user.User, error) {
-	query := `
+	const query = `
 	SELECT username, display_name, hashed_password, creation_date
 	FROM users
 	WHERE id = $1;
@@ -191,7 +191,7 @@ func (s SqlUserStore) Get(ctx context.Context, userID uuid.UUID) (*user.User, er
 }
 
 func (s SqlUserStore) Delete(ctx context.Context, userID uuid.UUID) error {
-	query := `
+	const query = `
 	DELETE FROM users
 	WHERE id = $1;
 	`
