@@ -116,3 +116,39 @@ func TestBefore(t *testing.T) {
 		})
 	}
 }
+
+func TestMaxDays(t *testing.T) {
+	tests := []struct {
+		name     string
+		date     Date
+		expected int
+	}{
+		{
+			"Valid",
+			Date(time.Date(2024, 12, 1, 0, 0, 0, 0, time.UTC)),
+			31,
+		},
+		{
+			"Valid",
+			Date(time.Date(2024, 1, 25, 0, 0, 0, 0, time.UTC)),
+			31,
+		},
+		{
+			"Valid",
+			Date(time.Date(2024, 4, 10, 0, 0, 0, 0, time.UTC)),
+			30,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := test.date.MaxDays()
+			if got != test.expected {
+				t.Errorf(
+					"Date(%q).MaxDays(), got=%v, expected=%v",
+					test.date, got, test.expected,
+				)
+			}
+		})
+	}
+}
