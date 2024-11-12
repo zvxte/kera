@@ -11,10 +11,6 @@ import (
 	"github.com/zvxte/kera/model/uuid"
 )
 
-// type HistoryParams struct {
-// 	date time.Time
-// }
-
 type HabitStore interface {
 	Create(ctx context.Context, habit *habit.Habit, userID uuid.UUID) error
 	GetAll(ctx context.Context, userID uuid.UUID) ([]*habit.Habit, error)
@@ -26,12 +22,12 @@ type HabitStore interface {
 	) error
 	End(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 	Delete(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
-	// GetHistory(
-	// 	ctx context.Context,
-	// 	habitID model.UUID,
-	// 	params HistoryParams,
-	// ) (*model.HabitHistory, error)
-	// UpdateHistory(ctx context.Context, habitID model.UUID, date time.Time) error
+	UpdateHistory(
+		ctx context.Context, id uuid.UUID, date date.Date, userID uuid.UUID,
+	) error
+	GetMonthHistory(
+		ctx context.Context, id uuid.UUID, date date.Date, userID uuid.UUID,
+	) (habit.History, error)
 }
 
 type SqlHabitStore struct {
@@ -189,4 +185,68 @@ func (s SqlHabitStore) Delete(
 	}
 
 	return nil
+}
+
+func (s SqlHabitStore) UpdateHistory(
+	ctx context.Context, id uuid.UUID, date date.Date, userID uuid.UUID,
+) error {
+	query := `
+	INSERT INTO habit_histories(habit_id, date, days)
+	VALUES ($1, $2, $3)
+	ON CONFLICT (habit_id, date)
+	DO UPDATE
+	SET days = habit_histories.days # $3
+	WHERE habit_histories.habit_id = $1
+	AND habit_histories.date = $2
+	AND EXISTS (SELECT 1 FROM habits WHERE id = $1 AND user_id = $4);
+	`
+	day := time.Time(date).Day()
+	var days int64 = 1 << (day - 1)
+
+	_, err := s.db.ExecContext(
+		ctx, query,
+		id, time.Time(date.FirstOfMonth()), days, userID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update habit history: %w", err)
+	}
+
+	return nil
+}
+
+func (s SqlHabitStore) GetMonthHistory(
+	ctx context.Context, id uuid.UUID, historyDate date.Date, userID uuid.UUID,
+) (habit.History, error) {
+	query := `
+	SELECT habit_histories.days,
+		   habits.tracked_week_days,
+		   habits.start_date,
+		   habits.end_date
+	FROM habit_histories
+	JOIN habits ON habits.id = habit_histories.habit_id
+	WHERE habit_histories.habit_id = $1
+		  AND habit_histories.date = $2
+		  AND habits.user_id = $3;
+	`
+	row := s.db.QueryRowContext(
+		ctx, query, id, time.Time(historyDate.FirstOfMonth()), userID,
+	)
+	var days uint
+	var tracked uint8
+	var startDate, endDate time.Time
+	err := row.Scan(&days, &tracked, &startDate, &endDate)
+	if err == sql.ErrNoRows {
+		return habit.NewUntrackedHistory(historyDate), nil
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get habit month history: %w", err)
+	}
+
+	history := habit.LoadHistoryFromBitmap(
+		historyDate, days, habit.TrackedWeekDays(tracked),
+		date.Load(startDate), date.Load(endDate),
+	)
+
+	return history, nil
 }
