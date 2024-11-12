@@ -5,16 +5,21 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/zvxte/kera/model/date"
 	"github.com/zvxte/kera/model/habit"
 	"github.com/zvxte/kera/model/uuid"
 	"github.com/zvxte/kera/store"
 )
 
-func NewHabitsMux(habitStore store.HabitStore, logger *log.Logger) *http.ServeMux {
+func NewHabitsMux(
+	habitStore store.HabitStore, userStore store.UserStore, logger *log.Logger,
+) *http.ServeMux {
 	h := &habitHandler{
 		habitStore: habitStore,
+		userStore:  userStore,
 		logger:     logger,
 	}
 
@@ -25,11 +30,14 @@ func NewHabitsMux(habitStore store.HabitStore, logger *log.Logger) *http.ServeMu
 	m.HandleFunc("PATCH /{id}/title", makeHandlerFunc(h.patchTitle))
 	m.HandleFunc("PATCH /{id}/description", makeHandlerFunc(h.patchDescription))
 	m.HandleFunc("PATCH /{id}/end", makeHandlerFunc(h.end))
+	m.HandleFunc("PATCH /{id}/history", makeHandlerFunc(h.patchHistory))
+	m.HandleFunc("GET /{id}/history", makeHandlerFunc(h.getHistory))
 	return m
 }
 
 type habitHandler struct {
 	habitStore store.HabitStore
+	userStore  store.UserStore
 	logger     *log.Logger
 }
 
@@ -253,4 +261,119 @@ func (h *habitHandler) end(w http.ResponseWriter, r *http.Request) response {
 	}
 
 	return noContentResponse{}
+}
+
+func (h *habitHandler) patchHistory(w http.ResponseWriter, r *http.Request) response {
+	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
+	if !ok {
+		return internalServerErrorResponse
+	}
+
+	id, err := uuid.Parse(
+		r.PathValue("id"),
+	)
+	if err != nil {
+		return badRequestResponse
+	}
+
+	var in struct {
+		Date string `json:"date"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		h.logger.Println(err)
+		return badRequestResponse
+	}
+
+	patchTime, err := time.Parse("2006-01-02", in.Date)
+	if err != nil {
+		h.logger.Println(err)
+		return badRequestResponse
+	}
+
+	patchDate := date.Load(patchTime)
+	now := date.Now()
+
+	diff := now.Sub(patchDate)
+	if diff < 0 || diff > habit.HistoryPatchWindow {
+		return badRequestResponse
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = h.habitStore.UpdateHistory(ctx, id, patchDate, userID)
+	if err != nil {
+		h.logger.Println(err)
+		return internalServerErrorResponse
+	}
+
+	return noContentResponse{}
+}
+
+func (h *habitHandler) getHistory(w http.ResponseWriter, r *http.Request) response {
+	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
+	if !ok {
+		return internalServerErrorResponse
+	}
+
+	id, err := uuid.Parse(
+		r.PathValue("id"),
+	)
+	if err != nil {
+		return badRequestResponse
+	}
+
+	rawYear := r.URL.Query().Get("year")
+	rawMonth := r.URL.Query().Get("month")
+
+	year, err := strconv.Atoi(rawYear)
+	if err != nil {
+		return badRequestResponse
+	}
+
+	month, err := strconv.Atoi(rawMonth)
+	if err != nil {
+		return badRequestResponse
+	}
+
+	if err := date.ValidateYear(year); err != nil {
+		return newJsonResponse(
+			http.StatusBadRequest,
+			newHandlerError(http.StatusBadRequest, err.Error()),
+		)
+	}
+
+	if err := date.ValidateMonth(month); err != nil {
+		return newJsonResponse(
+			http.StatusBadRequest,
+			newHandlerError(http.StatusBadRequest, err.Error()),
+		)
+	}
+
+	historyDate := date.New(year, time.Month(month), 1)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	history, err := h.habitStore.GetMonthHistory(ctx, id, historyDate, userID)
+	if err != nil {
+		h.logger.Println(err)
+		return internalServerErrorResponse
+	}
+
+	type out struct {
+		Status habit.DayStatus `json:"status"`
+		Date   time.Time       `json:"date"`
+	}
+
+	outs := make([]out, len(history))
+	for i, d := range history {
+		outs[i] = out{
+			Status: d.Status,
+			Date:   time.Time(d.Date),
+		}
+	}
+
+	return newJsonResponse(http.StatusOK, outs)
 }

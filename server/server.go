@@ -55,7 +55,7 @@ func NewServer() (*Server, error) {
 
 	authMux := handler.NewAuthMux(userStore, sessionStore, logger)
 	meMux := handler.NewMeMux(userStore, sessionStore, logger)
-	habitsMux := handler.NewHabitsMux(habitStore, logger)
+	habitsMux := handler.NewHabitsMux(habitStore, userStore, logger)
 
 	mux := http.NewServeMux()
 	mux.Handle("/auth/", http.StripPrefix("/auth", authMux))
