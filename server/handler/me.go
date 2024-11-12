@@ -28,7 +28,6 @@ func NewMeMux(
 	m.HandleFunc("GET /{$}", makeHandlerFunc(h.get))
 	m.HandleFunc("DELETE /{$}", makeHandlerFunc(h.delete))
 	m.HandleFunc("PATCH /display-name", makeHandlerFunc(h.patchDisplayName))
-	m.HandleFunc("PATCH /location", makeHandlerFunc(h.patchLocation))
 	m.HandleFunc("PATCH /password", makeHandlerFunc(h.patchPassword))
 	m.HandleFunc("POST /logout", makeHandlerFunc(h.logout))
 	m.HandleFunc("GET /sessions", makeHandlerFunc(h.getSessionsCount))
@@ -67,12 +66,10 @@ func (h *meHandler) get(w http.ResponseWriter, r *http.Request) response {
 		struct {
 			Username     string    `json:"username"`
 			DisplayName  string    `json:"display_name"`
-			Location     string    `json:"location"`
 			CreationDate time.Time `json:"creation_date"`
 		}{
 			Username:     user.Username,
 			DisplayName:  user.DisplayName,
-			Location:     user.Location.String(),
 			CreationDate: time.Time(user.CreationDate),
 		},
 	)
@@ -127,46 +124,6 @@ func (h *meHandler) patchDisplayName(w http.ResponseWriter, r *http.Request) res
 	defer cancel()
 
 	err = h.userStore.UpdateDisplayName(ctx, userID, in.DisplayName)
-	if err != nil {
-		h.logger.Println(err)
-		return internalServerErrorResponse
-	}
-
-	return noContentResponse{}
-}
-
-func (h *meHandler) patchLocation(w http.ResponseWriter, r *http.Request) response {
-	if r.Header.Get("Content-Type") != "application/json" {
-		return unsupportedMediaTypeResponse
-	}
-
-	userID, ok := r.Context().Value(userIDContextKey).(uuid.UUID)
-	if !ok {
-		return internalServerErrorResponse
-	}
-
-	var in struct {
-		Location string `json:"location"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		return badRequestResponse
-	}
-
-	err := user.ValidateLocationName(in.Location)
-	if err != nil {
-		return newJsonResponse(
-			http.StatusUnprocessableEntity,
-			newHandlerError(http.StatusUnprocessableEntity, err.Error()),
-		)
-	}
-
-	location, _ := time.LoadLocation(in.Location)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	err = h.userStore.UpdateLocation(ctx, userID, location)
 	if err != nil {
 		h.logger.Println(err)
 		return internalServerErrorResponse
