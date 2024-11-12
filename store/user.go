@@ -17,7 +17,6 @@ type UserStore interface {
 	IsTaken(ctx context.Context, username string) (bool, error)
 	UpdateDisplayName(ctx context.Context, id uuid.UUID, displayName string) error
 	UpdateHashedPassword(ctx context.Context, id uuid.UUID, hashedPassword string) error
-	UpdateLocation(ctx context.Context, id uuid.UUID, location *time.Location) error
 	GetByUsername(ctx context.Context, username string) (*user.User, error)
 	Get(ctx context.Context, userID uuid.UUID) (*user.User, error)
 	Delete(ctx context.Context, userID uuid.UUID) error
@@ -36,13 +35,14 @@ func NewSqlUserStore(db *sql.DB) (*SqlUserStore, error) {
 
 func (s SqlUserStore) Create(ctx context.Context, user *user.User) error {
 	query := `
-	INSERT INTO users(id, username, username_lower, display_name, hashed_password, location, creation_date)
-	VALUES ($1, $2, $3, $4, $5, $6, $7);
+	INSERT INTO users(id, username, username_lower,
+					  display_name, hashed_password, creation_date)
+	VALUES ($1, $2, $3, $4, $5, $6);
 	`
 	_, err := s.db.ExecContext(
 		ctx, query,
 		user.ID, user.Username, strings.ToLower(user.Username), user.DisplayName,
-		user.HashedPassword, user.Location.String(), time.Time(user.CreationDate),
+		user.HashedPassword, time.Time(user.CreationDate),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
@@ -113,30 +113,11 @@ func (s SqlUserStore) UpdateHashedPassword(
 	return nil
 }
 
-func (s SqlUserStore) UpdateLocation(
-	ctx context.Context, id uuid.UUID, location *time.Location,
-) error {
-	query := `
-	UPDATE users
-	SET location = $1
-	WHERE id = $2;
-	`
-	_, err := s.db.ExecContext(
-		ctx, query,
-		location.String(), id,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to update location: %w", err)
-	}
-
-	return nil
-}
-
 func (s SqlUserStore) GetByUsername(
 	ctx context.Context, username string,
 ) (*user.User, error) {
 	query := `
-	SELECT id, username, display_name, hashed_password, location, creation_date
+	SELECT id, username, display_name, hashed_password, creation_date
 	FROM users
 	WHERE username_lower = $1;
 	`
@@ -144,11 +125,11 @@ func (s SqlUserStore) GetByUsername(
 		ctx, query, strings.ToLower(username),
 	)
 
-	var rawUserID, dbUsername, displayName, hashedPassword, locationName string
+	var rawUserID, dbUsername, displayName, hashedPassword string
 	var creationDate time.Time
 	err := row.Scan(
 		&rawUserID, &dbUsername, &displayName,
-		&hashedPassword, &locationName, &creationDate,
+		&hashedPassword, &creationDate,
 	)
 
 	if err == sql.ErrNoRows {
@@ -164,18 +145,9 @@ func (s SqlUserStore) GetByUsername(
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	location, err := time.LoadLocation(locationName)
-	if err != nil {
-		location = time.UTC
-		err = s.UpdateLocation(ctx, id, location)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get user: %w", err)
-		}
-	}
-
 	user, err := user.Load(
-		id, dbUsername, displayName, hashedPassword,
-		location, date.Load(creationDate),
+		id, dbUsername, displayName,
+		hashedPassword, date.Load(creationDate),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
@@ -186,16 +158,16 @@ func (s SqlUserStore) GetByUsername(
 
 func (s SqlUserStore) Get(ctx context.Context, userID uuid.UUID) (*user.User, error) {
 	query := `
-	SELECT username, display_name, hashed_password, location, creation_date
+	SELECT username, display_name, hashed_password, creation_date
 	FROM users
 	WHERE id = $1;
 	`
 	row := s.db.QueryRowContext(ctx, query, userID[:])
 
-	var dbUsername, displayName, hashedPassword, locationName string
+	var dbUsername, displayName, hashedPassword string
 	var creationDate time.Time
 	err := row.Scan(
-		&dbUsername, &displayName, &hashedPassword, &locationName, &creationDate,
+		&dbUsername, &displayName, &hashedPassword, &creationDate,
 	)
 
 	if err == sql.ErrNoRows {
@@ -206,18 +178,9 @@ func (s SqlUserStore) Get(ctx context.Context, userID uuid.UUID) (*user.User, er
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
-	location, err := time.LoadLocation(locationName)
-	if err != nil {
-		location = time.UTC
-		err = s.UpdateLocation(ctx, userID, location)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get user: %w", err)
-		}
-	}
-
 	user, err := user.Load(
-		userID, dbUsername, displayName, hashedPassword,
-		location, date.Load(creationDate),
+		userID, dbUsername, displayName,
+		hashedPassword, date.Load(creationDate),
 	)
 
 	if err != nil {
