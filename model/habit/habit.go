@@ -47,6 +47,10 @@ func (d TrackedWeekDays) WeekDays() []WeekDay {
 	return weekDays
 }
 
+func (d TrackedWeekDays) Tracked(day WeekDay) bool {
+	return ((d >> day) & 1) == 1
+}
+
 // WeekDay represents a day of the week.
 type WeekDay uint8
 
@@ -58,26 +62,6 @@ const (
 	Friday
 	Saturday
 	Sunday
-)
-
-// History represents a history of a habit.
-type History []Day
-
-// HabitDay represents a single day record in a history of a habit.
-// It contains the status and the date of that record.
-type Day struct {
-	Status DayStatus
-	Date   date.Date
-}
-
-// DayStatus represents a status of a single day record in a history of a habit.
-type DayStatus uint8
-
-const (
-	DayUntracked DayStatus = iota
-	DayDone
-	DayMissed
-	DayPending
 )
 
 // New returns a new *Habit.

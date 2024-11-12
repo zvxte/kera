@@ -4,6 +4,34 @@ import (
 	"testing"
 )
 
+func TestTracked(t *testing.T) {
+	tests := []struct {
+		name     string
+		tracked  TrackedWeekDays
+		day      WeekDay
+		expected bool
+	}{
+		{
+			"Valid",
+			0b_00011111,
+			Friday,
+			true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := test.tracked.Tracked(test.day)
+			if got != test.expected {
+				t.Errorf(
+					"TrackedWeekDays(%v).Tracked(%v), got=%v, expected=%v",
+					test.tracked, test.day, got, test.expected,
+				)
+			}
+		})
+	}
+}
+
 func TestNewHabit(t *testing.T) {
 	tests := []struct {
 		name        string
