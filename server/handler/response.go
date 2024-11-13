@@ -65,3 +65,9 @@ type noContentResponse struct{}
 func (r noContentResponse) write(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNoContent)
 }
+
+type createdResponse struct{}
+
+func (r createdResponse) write(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusCreated)
+}
