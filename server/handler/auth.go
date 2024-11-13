@@ -10,7 +10,8 @@ import (
 	"github.com/zvxte/kera/hash/argon2id"
 	"github.com/zvxte/kera/model/session"
 	"github.com/zvxte/kera/model/user"
-	"github.com/zvxte/kera/store"
+	"github.com/zvxte/kera/store/sessionstore"
+	"github.com/zvxte/kera/store/userstore"
 )
 
 type userIn struct {
@@ -19,8 +20,8 @@ type userIn struct {
 }
 
 func NewAuthMux(
-	userStore store.UserStore,
-	sessionStore store.SessionStore,
+	userStore userstore.Store,
+	sessionStore sessionstore.Store,
 	logger *log.Logger,
 ) *http.ServeMux {
 	h := &authHandler{
@@ -36,8 +37,8 @@ func NewAuthMux(
 }
 
 type authHandler struct {
-	userStore    store.UserStore
-	sessionStore store.SessionStore
+	userStore    userstore.Store
+	sessionStore sessionstore.Store
 	logger       *log.Logger
 }
 
@@ -62,7 +63,9 @@ func (h *authHandler) Login(w http.ResponseWriter, r *http.Request) response {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	user, err := h.userStore.GetByUsername(ctx, in.Username)
+	user, err := h.userStore.Get(
+		ctx, userstore.UsernameColumn, in.Username,
+	)
 	if err != nil {
 		h.logger.Println(err)
 		return internalServerErrorResponse
@@ -86,9 +89,9 @@ func (h *authHandler) Login(w http.ResponseWriter, r *http.Request) response {
 		return internalServerErrorResponse
 	}
 
-	session := session.New(sessionID)
+	session := session.New(sessionID, user.ID)
 
-	err = h.sessionStore.Create(ctx, session, user.ID)
+	err = h.sessionStore.Create(ctx, session)
 	if err != nil {
 		h.logger.Println(err)
 		return internalServerErrorResponse
@@ -120,20 +123,14 @@ func (h *authHandler) Register(w http.ResponseWriter, r *http.Request) response 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	isTaken, err := h.userStore.IsTaken(ctx, user.Username)
-	if err != nil {
-		h.logger.Println(err)
-		return internalServerErrorResponse
-	}
-	if isTaken {
+	err = h.userStore.Create(ctx, user)
+	if err == userstore.ErrUsernameAlreadyTaken {
 		return usernameAlreadyTakenResponse
 	}
-
-	err = h.userStore.Create(ctx, user)
 	if err != nil {
 		h.logger.Println(err)
 		return internalServerErrorResponse
 	}
 
-	return noContentResponse{}
+	return createdResponse{}
 }

@@ -11,11 +11,12 @@ import (
 	"github.com/zvxte/kera/model/date"
 	"github.com/zvxte/kera/model/habit"
 	"github.com/zvxte/kera/model/uuid"
-	"github.com/zvxte/kera/store"
+	"github.com/zvxte/kera/store/habitstore"
+	"github.com/zvxte/kera/store/userstore"
 )
 
 func NewHabitsMux(
-	habitStore store.HabitStore, userStore store.UserStore, logger *log.Logger,
+	habitStore habitstore.Store, userStore userstore.Store, logger *log.Logger,
 ) *http.ServeMux {
 	h := &habitHandler{
 		habitStore: habitStore,
@@ -36,8 +37,8 @@ func NewHabitsMux(
 }
 
 type habitHandler struct {
-	habitStore store.HabitStore
-	userStore  store.UserStore
+	habitStore habitstore.Store
+	userStore  userstore.Store
 	logger     *log.Logger
 }
 
@@ -189,7 +190,9 @@ func (h *habitHandler) patchTitle(w http.ResponseWriter, r *http.Request) respon
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err = h.habitStore.UpdateTitle(ctx, habitID, in.Title, userID)
+	err = h.habitStore.Update(
+		ctx, habitID, habitstore.TitleColumn, in.Title, userID,
+	)
 	if err != nil {
 		h.logger.Println(err)
 		return internalServerErrorResponse
@@ -229,7 +232,9 @@ func (h *habitHandler) patchDescription(w http.ResponseWriter, r *http.Request) 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err = h.habitStore.UpdateDescription(ctx, id, in.Description, userID)
+	err = h.habitStore.Update(
+		ctx, id, habitstore.DescriptionColumn, in.Description, userID,
+	)
 	if err != nil {
 		h.logger.Println(err)
 		return internalServerErrorResponse

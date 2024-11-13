@@ -11,7 +11,9 @@ import (
 
 	"github.com/zvxte/kera/database"
 	"github.com/zvxte/kera/server/handler"
-	"github.com/zvxte/kera/store"
+	"github.com/zvxte/kera/store/habitstore"
+	"github.com/zvxte/kera/store/sessionstore"
+	"github.com/zvxte/kera/store/userstore"
 )
 
 type Server struct {
@@ -29,7 +31,9 @@ func NewServer() (*Server, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	sqlDatabase, err := database.NewSqlDatabase(ctx, database.PostgresDriverName, dataSourceName)
+	sqlDatabase, err := database.NewSqlDatabase(
+		ctx, database.PostgresDriverName, dataSourceName,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Server: %w", err)
 	}
@@ -38,17 +42,17 @@ func NewServer() (*Server, error) {
 		return nil, fmt.Errorf("failed to create Server: %w", err)
 	}
 
-	userStore, err := store.NewSqlUserStore(sqlDatabase.DB)
+	userStore, err := userstore.NewSql(sqlDatabase.DB)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Server: %w", err)
 	}
 
-	sessionStore, err := store.NewSqlSessionStore(sqlDatabase.DB)
+	sessionStore, err := sessionstore.NewSql(sqlDatabase.DB)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Server: %w", err)
 	}
 
-	habitStore, err := store.NewSqlHabitStore(sqlDatabase.DB)
+	habitStore, err := habitstore.NewSql(sqlDatabase.DB)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Server: %w", err)
 	}

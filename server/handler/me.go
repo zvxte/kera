@@ -12,11 +12,12 @@ import (
 	"github.com/zvxte/kera/model/session"
 	"github.com/zvxte/kera/model/user"
 	"github.com/zvxte/kera/model/uuid"
-	"github.com/zvxte/kera/store"
+	"github.com/zvxte/kera/store/sessionstore"
+	"github.com/zvxte/kera/store/userstore"
 )
 
 func NewMeMux(
-	userStore store.UserStore, sessionStore store.SessionStore, logger *log.Logger,
+	userStore userstore.Store, sessionStore sessionstore.Store, logger *log.Logger,
 ) *http.ServeMux {
 	h := &meHandler{
 		userStore:    userStore,
@@ -36,8 +37,8 @@ func NewMeMux(
 }
 
 type meHandler struct {
-	userStore    store.UserStore
-	sessionStore store.SessionStore
+	userStore    userstore.Store
+	sessionStore sessionstore.Store
 	logger       *log.Logger
 }
 
@@ -50,7 +51,7 @@ func (h *meHandler) get(w http.ResponseWriter, r *http.Request) response {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	user, err := h.userStore.Get(ctx, userID)
+	user, err := h.userStore.Get(ctx, userstore.IDColumn, userID)
 	if err != nil {
 		h.logger.Println(err)
 		return internalServerErrorResponse
@@ -123,7 +124,9 @@ func (h *meHandler) patchDisplayName(w http.ResponseWriter, r *http.Request) res
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err = h.userStore.UpdateDisplayName(ctx, userID, in.DisplayName)
+	err = h.userStore.Update(
+		ctx, userID, userstore.DisplayNameColumn, in.DisplayName,
+	)
 	if err != nil {
 		h.logger.Println(err)
 		return internalServerErrorResponse
@@ -167,13 +170,15 @@ func (h *meHandler) patchPassword(w http.ResponseWriter, r *http.Request) respon
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	user, err := h.userStore.Get(ctx, userID)
+	user, err := h.userStore.Get(ctx, userstore.IDColumn, userID)
 	if err != nil {
 		h.logger.Println(err)
 		return internalServerErrorResponse
 	}
 
-	isValid, err := argon2id.VerifyHash(in.PlainPassword, user.HashedPassword)
+	isValid, err := argon2id.VerifyHash(
+		in.PlainPassword, user.HashedPassword,
+	)
 	if err != nil {
 		h.logger.Println(err)
 		return internalServerErrorResponse
@@ -182,13 +187,17 @@ func (h *meHandler) patchPassword(w http.ResponseWriter, r *http.Request) respon
 		return invalidCredentialsResponse
 	}
 
-	newHashedPassword, err := argon2id.Hash(in.NewPlainPassword, argon2id.DefaultParams)
+	newHashedPassword, err := argon2id.Hash(
+		in.NewPlainPassword, argon2id.DefaultParams,
+	)
 	if err != nil {
 		h.logger.Println(err)
 		return internalServerErrorResponse
 	}
 
-	err = h.userStore.UpdateHashedPassword(ctx, user.ID, newHashedPassword)
+	err = h.userStore.Update(
+		ctx, user.ID, userstore.HashedPasswordColumn, newHashedPassword,
+	)
 	if err != nil {
 		h.logger.Println(err)
 		return internalServerErrorResponse
@@ -209,7 +218,9 @@ func (h *meHandler) logout(w http.ResponseWriter, r *http.Request) response {
 
 		hashedSessionID := session.HashedID(sha256.Hash(sessionID))
 
-		err := h.sessionStore.Delete(ctx, hashedSessionID)
+		err := h.sessionStore.Delete(
+			ctx, sessionstore.HashedIDColumn, hashedSessionID,
+		)
 		if err != nil {
 			h.logger.Println(err)
 		}
@@ -251,7 +262,7 @@ func (h *meHandler) deleteSessions(w http.ResponseWriter, r *http.Request) respo
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err := h.sessionStore.DeleteAll(ctx, userID)
+	err := h.sessionStore.Delete(ctx, sessionstore.UserIDColumn, userID)
 	if err != nil {
 		h.logger.Println(err)
 		return internalServerErrorResponse

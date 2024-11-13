@@ -8,10 +8,10 @@ import (
 	"github.com/zvxte/kera/hash/sha256"
 	"github.com/zvxte/kera/model/date"
 	"github.com/zvxte/kera/model/session"
-	"github.com/zvxte/kera/store"
+	"github.com/zvxte/kera/store/sessionstore"
 )
 
-func SessionMiddleware(next http.Handler, store store.SessionStore) http.Handler {
+func SessionMiddleware(next http.Handler, store sessionstore.Store) http.Handler {
 	f := func(w http.ResponseWriter, r *http.Request) response {
 		sessionID := r.Header.Get(sessionIDHeaderName)
 		if sessionID == "" {
@@ -28,7 +28,9 @@ func SessionMiddleware(next http.Handler, store store.SessionStore) http.Handler
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		session, userID, err := store.Get(ctx, hashedSessionID)
+		session, err := store.Get(
+			ctx, sessionstore.HashedIDColumn, hashedSessionID,
+		)
 		if err != nil {
 			return internalServerErrorResponse
 		}
@@ -38,7 +40,7 @@ func SessionMiddleware(next http.Handler, store store.SessionStore) http.Handler
 			return unauthorizedResponse
 		}
 
-		ctx = context.WithValue(r.Context(), userIDContextKey, userID)
+		ctx = context.WithValue(r.Context(), userIDContextKey, session.UserID)
 		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 

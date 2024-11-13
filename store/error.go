@@ -2,4 +2,8 @@ package store
 
 import "errors"
 
-var NilDBPointerError = errors.New("function called with nil pointer to sql.DB")
+var (
+	ErrNilDB              = errors.New("function called with nil *sql.DB")
+	ErrInvalidColumn      = errors.New("column is invalid")
+	ErrInvalidColumnValue = errors.New("column value is invalid")
+)

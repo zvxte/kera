@@ -1,4 +1,4 @@
-package store
+package habitstore
 
 import (
 	"context"
@@ -9,46 +9,31 @@ import (
 	"github.com/zvxte/kera/model/date"
 	"github.com/zvxte/kera/model/habit"
 	"github.com/zvxte/kera/model/uuid"
+	"github.com/zvxte/kera/store"
 )
 
-type HabitStore interface {
-	Create(ctx context.Context, habit *habit.Habit, userID uuid.UUID) error
-	GetAll(ctx context.Context, userID uuid.UUID) ([]*habit.Habit, error)
-	UpdateTitle(
-		ctx context.Context, id uuid.UUID, title string, userID uuid.UUID,
-	) error
-	UpdateDescription(
-		ctx context.Context, id uuid.UUID, description string, userID uuid.UUID,
-	) error
-	End(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
-	Delete(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
-	UpdateHistory(
-		ctx context.Context, id uuid.UUID, date date.Date, userID uuid.UUID,
-	) error
-	GetMonthHistory(
-		ctx context.Context, id uuid.UUID, date date.Date, userID uuid.UUID,
-	) (habit.History, error)
-}
-
-type SqlHabitStore struct {
+type Sql struct {
 	db *sql.DB
 }
 
-func NewSqlHabitStore(db *sql.DB) (*SqlHabitStore, error) {
+func NewSql(db *sql.DB) (Sql, error) {
 	if db == nil {
-		return nil, NilDBPointerError
+		return Sql{}, store.ErrNilDB
 	}
-	return &SqlHabitStore{db}, nil
+	return Sql{db}, nil
 }
 
-func (s SqlHabitStore) Create(
+func (s Sql) Create(
 	ctx context.Context, habit *habit.Habit, userID uuid.UUID,
 ) error {
 	const query = `
-	INSERT INTO habits(id, user_id, status, title, description,
-					   tracked_week_days, start_date, end_date)
+	INSERT INTO habits(
+		id, user_id, status, title, description,
+		tracked_week_days, start_date, end_date
+	)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
 	`
+
 	_, err := s.db.ExecContext(
 		ctx, query,
 		habit.ID, userID, habit.Status, habit.Title, habit.Description,
@@ -61,15 +46,17 @@ func (s SqlHabitStore) Create(
 	return nil
 }
 
-func (s SqlHabitStore) GetAll(
+func (s Sql) GetAll(
 	ctx context.Context, userID uuid.UUID,
 ) ([]*habit.Habit, error) {
 	const query = `
-	SELECT id, status, title, description,
-		   tracked_week_days, start_date, end_date
+	SELECT
+		id, status, title, description,
+		tracked_week_days, start_date, end_date
 	FROM habits
 	WHERE user_id = $1;
 	`
+
 	rows, err := s.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all habits: %w", err)
@@ -115,18 +102,39 @@ func (s SqlHabitStore) GetAll(
 	return habits, nil
 }
 
-func (s SqlHabitStore) UpdateTitle(
-	ctx context.Context, id uuid.UUID, title string, userID uuid.UUID,
+func (s Sql) Update(
+	ctx context.Context, id uuid.UUID, col Column, value any, userID uuid.UUID,
 ) error {
-	const query = `
-	UPDATE habits
-	SET title = $1
-	WHERE id = $2 AND user_id = $3;
-	`
-	_, err := s.db.ExecContext(
-		ctx, query,
-		title, id, userID,
+	const (
+		titleQuery = `
+		UPDATE habits
+		SET title = $1
+		WHERE id = $2 AND user_id = $3;
+		`
+		descriptionQuery = `
+		UPDATE habits
+		SET description = $1
+		WHERE id = $2 AND user_id = $3;
+		`
 	)
+
+	var query string
+	switch col {
+	case TitleColumn:
+		if _, ok := value.(string); !ok {
+			return store.ErrInvalidColumnValue
+		}
+		query = titleQuery
+	case DescriptionColumn:
+		if _, ok := value.(string); !ok {
+			return store.ErrInvalidColumnValue
+		}
+		query = descriptionQuery
+	default:
+		return store.ErrInvalidColumn
+	}
+
+	_, err := s.db.ExecContext(ctx, query, value, id, userID)
 	if err != nil {
 		return fmt.Errorf("failed to update title: %w", err)
 	}
@@ -134,26 +142,23 @@ func (s SqlHabitStore) UpdateTitle(
 	return nil
 }
 
-func (s SqlHabitStore) UpdateDescription(
-	ctx context.Context, id uuid.UUID, description string, userID uuid.UUID,
+func (s Sql) Delete(
+	ctx context.Context, id uuid.UUID, userID uuid.UUID,
 ) error {
 	const query = `
-	UPDATE habits
-	SET description = $1
-	WHERE id = $2 AND user_id = $3;
+	DELETE FROM habits
+	WHERE id = $1 AND user_id = $2;
 	`
-	_, err := s.db.ExecContext(
-		ctx, query,
-		description, id, userID,
-	)
+
+	_, err := s.db.ExecContext(ctx, query, id, userID)
 	if err != nil {
-		return fmt.Errorf("failed to update description: %w", err)
+		return fmt.Errorf("failed to delete habit: %w", err)
 	}
 
 	return nil
 }
 
-func (s SqlHabitStore) End(
+func (s Sql) End(
 	ctx context.Context, id uuid.UUID, userID uuid.UUID,
 ) error {
 	const query = `
@@ -161,6 +166,7 @@ func (s SqlHabitStore) End(
 	SET status = $1, end_date = $2
 	WHERE status = $3 AND id = $4 AND user_id = $5;
 	`
+
 	_, err := s.db.ExecContext(
 		ctx, query,
 		habit.Ended, time.Time(date.Now()), habit.Active, id, userID,
@@ -172,23 +178,8 @@ func (s SqlHabitStore) End(
 	return nil
 }
 
-func (s SqlHabitStore) Delete(
-	ctx context.Context, id uuid.UUID, userID uuid.UUID,
-) error {
-	const query = `
-	DELETE FROM habits
-	WHERE id = $1 AND user_id = $2;
-	`
-	_, err := s.db.ExecContext(ctx, query, id, userID)
-	if err != nil {
-		return fmt.Errorf("failed to delete habit: %w", err)
-	}
-
-	return nil
-}
-
-func (s SqlHabitStore) UpdateHistory(
-	ctx context.Context, id uuid.UUID, date date.Date, userID uuid.UUID,
+func (s Sql) UpdateHistory(
+	ctx context.Context, id uuid.UUID, historyDate date.Date, userID uuid.UUID,
 ) error {
 	const query = `
 	INSERT INTO habit_histories(habit_id, date, days)
@@ -200,12 +191,13 @@ func (s SqlHabitStore) UpdateHistory(
 	AND habit_histories.date = $2
 	AND EXISTS (SELECT 1 FROM habits WHERE id = $1 AND user_id = $4);
 	`
-	day := time.Time(date).Day()
+
+	day := time.Time(historyDate).Day()
 	var days int64 = 1 << (day - 1)
 
 	_, err := s.db.ExecContext(
 		ctx, query,
-		id, time.Time(date.FirstOfMonth()), days, userID,
+		id, time.Time(historyDate.FirstOfMonth()), days, userID,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update habit history: %w", err)
@@ -214,7 +206,7 @@ func (s SqlHabitStore) UpdateHistory(
 	return nil
 }
 
-func (s SqlHabitStore) GetMonthHistory(
+func (s Sql) GetMonthHistory(
 	ctx context.Context, id uuid.UUID, historyDate date.Date, userID uuid.UUID,
 ) (habit.History, error) {
 	const query = `
@@ -228,17 +220,18 @@ func (s SqlHabitStore) GetMonthHistory(
 		  AND habit_histories.date = $2
 		  AND habits.user_id = $3;
 	`
-	row := s.db.QueryRowContext(
-		ctx, query, id, time.Time(historyDate.FirstOfMonth()), userID,
-	)
+
 	var days uint
 	var tracked uint8
 	var startDate, endDate time.Time
+
+	row := s.db.QueryRowContext(
+		ctx, query, id, time.Time(historyDate.FirstOfMonth()), userID,
+	)
 	err := row.Scan(&days, &tracked, &startDate, &endDate)
 	if err == sql.ErrNoRows {
 		return habit.NewUntrackedHistory(historyDate), nil
 	}
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get habit month history: %w", err)
 	}
