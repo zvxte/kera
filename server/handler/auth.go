@@ -115,8 +115,8 @@ func (h *authHandler) Register(w http.ResponseWriter, r *http.Request) response 
 	user, err := user.New(in.Username, in.PlainPassword)
 	if err != nil {
 		return newJsonResponse(
-			http.StatusUnprocessableEntity,
-			newHandlerError(http.StatusUnprocessableEntity, err.Error()),
+			http.StatusBadRequest,
+			newHandlerError(http.StatusBadRequest, err.Error()),
 		)
 	}
 

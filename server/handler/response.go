@@ -23,8 +23,8 @@ var (
 		newHandlerError(http.StatusUnsupportedMediaType, ErrUnsupportedMediaType.Error()),
 	)
 	invalidCredentialsResponse = newJsonResponse(
-		http.StatusUnprocessableEntity,
-		newHandlerError(http.StatusUnprocessableEntity, ErrInvalidCredentials.Error()),
+		http.StatusBadRequest,
+		newHandlerError(http.StatusBadRequest, ErrInvalidCredentials.Error()),
 	)
 	usernameAlreadyTakenResponse = newJsonResponse(
 		http.StatusConflict,

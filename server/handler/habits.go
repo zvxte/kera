@@ -63,8 +63,8 @@ func (h *habitHandler) create(w http.ResponseWriter, r *http.Request) response {
 	)
 	if err != nil {
 		return newJsonResponse(
-			http.StatusUnprocessableEntity,
-			newHandlerError(http.StatusUnprocessableEntity, err.Error()),
+			http.StatusBadRequest,
+			newHandlerError(http.StatusBadRequest, err.Error()),
 		)
 	}
 
@@ -182,8 +182,8 @@ func (h *habitHandler) patchTitle(w http.ResponseWriter, r *http.Request) respon
 
 	if err := habit.ValidateTitle(in.Title); err != nil {
 		return newJsonResponse(
-			http.StatusUnprocessableEntity,
-			newHandlerError(http.StatusUnprocessableEntity, err.Error()),
+			http.StatusBadRequest,
+			newHandlerError(http.StatusBadRequest, err.Error()),
 		)
 	}
 
@@ -224,8 +224,8 @@ func (h *habitHandler) patchDescription(w http.ResponseWriter, r *http.Request) 
 
 	if err := habit.ValidateDescription(in.Description); err != nil {
 		return newJsonResponse(
-			http.StatusUnprocessableEntity,
-			newHandlerError(http.StatusUnprocessableEntity, err.Error()),
+			http.StatusBadRequest,
+			newHandlerError(http.StatusBadRequest, err.Error()),
 		)
 	}
 

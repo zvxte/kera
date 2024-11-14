@@ -116,8 +116,8 @@ func (h *meHandler) patchDisplayName(w http.ResponseWriter, r *http.Request) res
 	err := user.ValidateDisplayName(in.DisplayName)
 	if err != nil {
 		return newJsonResponse(
-			http.StatusUnprocessableEntity,
-			newHandlerError(http.StatusUnprocessableEntity, err.Error()),
+			http.StatusBadRequest,
+			newHandlerError(http.StatusBadRequest, err.Error()),
 		)
 	}
 
@@ -157,8 +157,8 @@ func (h *meHandler) patchPassword(w http.ResponseWriter, r *http.Request) respon
 	err := user.ValidatePlainPassword(in.NewPlainPassword)
 	if err != nil {
 		return newJsonResponse(
-			http.StatusUnprocessableEntity,
-			newHandlerError(http.StatusUnprocessableEntity, err.Error()),
+			http.StatusBadRequest,
+			newHandlerError(http.StatusBadRequest, err.Error()),
 		)
 	}
 
