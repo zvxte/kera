@@ -1,0 +1,578 @@
+openapi: 3.1.0
+
+info:
+    version: 1.0.0
+    title: kera
+    description: "[SOURCE CODE](https://github.com/zvxte/kera)"
+    license:
+        name: AGPL-3.0
+
+tags:
+    - name: auth
+    - name: users
+    - name: habits
+
+components:
+    parameters:
+        SessionIDCookie:
+            name: session_id
+            in: cookie
+            required: true
+            schema:
+                $ref: '#/components/schemas/SessionID'
+        HabitIDPath:
+            name: habit_id
+            in: path
+            required: true
+            schema:
+                $ref: '#/components/schemas/UUID'
+    schemas:
+        SessionID:
+            type: string
+            minLength: 32
+            maxLength: 32
+            pattern: "^[A-Za-z0-9]+$"
+        UUID:
+            type: string
+            format: uuid
+        Username:
+            type: string
+            minLength: 4
+            maxLength: 16
+            pattern: "^[A-Za-z0-9_]+$"
+        DisplayName:
+            type: string
+            minLength: 4
+            maxLength: 16
+        Password:
+            type: string
+            minLength: 8
+            maxLength: 128
+            format: password
+        Date:
+            type: string
+            format: date
+        Title:
+            type: string
+            minLength: 2
+            maxLength: 64
+        Description:
+            type: string
+            minLength: 0
+            maxLength: 256
+        WeekDays:
+            type: array
+            minItems: 1
+            maxItems: 7
+            items:
+                type: integer
+                minimum: 0
+                maximum: 6
+        UserIn:
+            type: object
+            properties:
+                username:
+                    $ref: '#/components/schemas/Username'
+                password:
+                    $ref: '#/components/schemas/Password'
+            required:
+                - username
+                - password
+        UserOut:
+            type: object
+            properties:
+                username:
+                    $ref: '#/components/schemas/Username'
+                display_name:
+                    $ref: '#/components/schemas/DisplayName'
+                creation_date:
+                    $ref: '#/components/schemas/Date'
+            required:
+                - username
+                - display_name
+                - creation_date
+        DisplayNameIn:
+            type: object
+            properties:
+                display_name:
+                    $ref: '#/components/schemas/DisplayName'
+            required:
+                - display_name
+        PasswordIn:
+            type: object
+            properties:
+                password:
+                    $ref: '#/components/schemas/Password'
+                new_password:
+                    $ref: '#/components/schemas/Password'
+            required:
+                - password
+                - new_password
+        SessionsOut:
+            type: object
+            properties:
+                count:
+                    type: integer
+                    minimum: 0
+            required:
+                - count
+        HabitIn:
+            type: object
+            properties:
+                title:
+                    $ref: '#/components/schemas/Title'
+                description:
+                    $ref: '#/components/schemas/Description'
+                week_days:
+                    $ref: '#/components/schemas/WeekDays'
+            required:
+                - title
+                - week_days
+        HabitsOut:
+            type: array
+            items:
+                type: object
+                properties:
+                    id:
+                        $ref: '#/components/schemas/UUID'
+                    status:
+                        type: integer
+                        minimum: 0
+                        maximum: 1
+                    title:
+                        $ref: '#/components/schemas/Title'
+                    description:
+                        $ref: '#/components/schemas/Description'
+                    week_days:
+                        $ref: '#/components/schemas/WeekDays'
+                    start_date:
+                        $ref: '#/components/schemas/Date'
+                    end_date:
+                        $ref: '#/components/schemas/Date'
+                required:
+                    - id
+                    - status
+                    - title
+                    - description
+                    - week_days
+                    - start_date
+                    - end_date
+        TitleIn:
+            type: object
+            properties:
+                title:
+                    $ref: '#/components/schemas/Title'
+            required:
+                - title
+        DescriptionIn:
+            type: object
+            properties:
+                description:
+                    $ref: '#/components/schemas/Description'
+        HistoryIn:
+            type: object
+            properties:
+                date:
+                    $ref: '#/components/schemas/Date'
+            required:
+                - date
+        HistoryOut:
+            type: array
+            items:
+                type: object
+                properties:
+                    status:
+                        type: integer
+                        minimum: 0
+                        maximum: 3
+                    date:
+                        $ref: '#/components/schemas/Date'
+                required:
+                    - status
+                    - date
+        Error:
+            type: object
+            properties:
+                status_code:
+                    type: integer
+                    minimum: 0
+                message:
+                    type: string
+            required:
+                - status_code
+                - message
+    responses:
+        BadRequestError:
+            description: Bad Request
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Error'
+        UnauthorizedError:
+            description: Unauthorized
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Error'
+        ConflictError:
+            description: Conflict Error
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Error'
+        InternalServerError:
+            description: Internal Server Error
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Error'
+
+paths:
+    /auth/register:
+        post:
+            summary: Creates a new user
+            tags:
+                - auth
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UserIn'
+            responses:
+                '201':
+                    description: New user is created
+                '400':
+                    description: User body is invalid
+                    $ref: '#/components/responses/BadRequestError'
+                '409':
+                    description: Username is already taken
+                    $ref: '#/components/responses/ConflictError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+    /auth/login:
+        post:
+            summary: Logs a user in and sets a session cookie
+            tags:
+                - auth
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UserIn'
+            responses:
+                '204':
+                    description: User is logged in
+                    headers:
+                        Set-Cookie:
+                            description: session_id
+                            required: true
+                            schema:
+                                $ref: '#/components/schemas/SessionID'
+                '400':
+                    description: User body is invalid
+                    $ref: '#/components/responses/BadRequestError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+    /me/:
+        get:
+            summary: Returns a user
+            tags:
+                - users
+            parameters:
+                - $ref: '#/components/parameters/SessionIDCookie'
+            responses:
+                '200':
+                    description: User is returned
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UserOut'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+        delete:
+            summary: Deletes a user
+            tags:
+                - users
+            parameters:
+                - $ref: '#/components/parameters/SessionIDCookie'
+            responses:
+                '204':
+                    description: User is deleted
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+    /me/display-name:
+        patch:
+            summary: Updates user's display name
+            tags:
+                - users
+            parameters:
+                - $ref: '#/components/parameters/SessionIDCookie'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DisplayNameIn'
+            responses:
+                '204':
+                    description: User's display name is updated
+                '400':
+                    description: Display name body is invalid
+                    $ref: '#/components/responses/BadRequestError'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+    /me/password:
+        patch:
+            summary: Updates user's password
+            tags:
+                - users
+            parameters:
+                - $ref: '#/components/parameters/SessionIDCookie'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/PasswordIn'
+            responses:
+                '204':
+                    description: User's password is updated
+                '400':
+                    description: Password body is invalid
+                    $ref: '#/components/responses/BadRequestError'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+    /me/sessions:
+        get:
+            summary: Returns the number of sessions
+            tags:
+                - users
+            parameters:
+                - $ref: '#/components/parameters/SessionIDCookie'
+            responses:
+                '200':
+                    description: Number of sessions is returned
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SessionsOut'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+        delete:
+            summary: Deletes all sessions
+            tags:
+                - users
+            parameters:
+                - $ref: '#/components/parameters/SessionIDCookie'
+            responses:
+                '204':
+                    description: All sessions are deleted
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+    /me/logout:
+        post:
+            summary: Logs a user out and unsets a session cookie
+            tags:
+                - users
+            parameters:
+                - $ref: '#/components/parameters/SessionIDCookie'
+            responses:
+                '204':
+                    description: User is logged out
+                    headers:
+                        Set-Cookie:
+                            description: session_id
+                            required: true
+                            schema:
+                                $ref: '#/components/schemas/SessionID'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+    /habits/:
+        post:
+            summary: Creates a new habit
+            tags:
+                - habits
+            parameters:
+                - $ref: '#/components/parameters/SessionIDCookie'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/HabitIn'
+            responses:
+                '201':
+                    description: New habit is created
+                '400':
+                    description: Habit body is invalid
+                    $ref: '#/components/responses/BadRequestError'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+        get:
+            summary: Returns all habits
+            tags:
+                - habits
+            parameters:
+                - $ref: '#/components/parameters/SessionIDCookie'
+            responses:
+                '200':
+                    description: All habits are returned
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/HabitsOut'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+    /habits/{habit_id}:
+        delete:
+            summary: Deletes a habit
+            tags:
+                - habits
+            parameters:
+                - $ref: '#/components/parameters/SessionIDCookie'
+                - $ref: '#/components/parameters/HabitIDPath'
+            responses:
+                '204':
+                    description: Habit is deleted
+                '400':
+                    description: Habit ID is invalid
+                    $ref: '#/components/responses/BadRequestError'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+    /habits/{habit_id}/title:
+        patch:
+            summary: Updates habit's title
+            tags:
+                - habits
+            parameters:
+                - $ref: '#/components/parameters/SessionIDCookie'
+                - $ref: '#/components/parameters/HabitIDPath'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/TitleIn'
+            responses:
+                '204':
+                    description: Habit's title is updated
+                '400':
+                    description: Habit ID or body is invalid
+                    $ref: '#/components/responses/BadRequestError'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+    /habits/{habit_id}/description:
+        patch:
+            summary: Updates habit's description
+            tags:
+                - habits
+            parameters:
+                - $ref: '#/components/parameters/SessionIDCookie'
+                - $ref: '#/components/parameters/HabitIDPath'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DescriptionIn'
+            responses:
+                '204':
+                    description: Habit's description is updated
+                '400':
+                    description: Habit ID or body is invalid
+                    $ref: '#/components/responses/BadRequestError'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+    /habits/{habit_id}/end:
+        patch:
+            summary: Ends a habit
+            tags:
+                - habits
+            parameters:
+                - $ref: '#/components/parameters/SessionIDCookie'
+                - $ref: '#/components/parameters/HabitIDPath'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/HistoryIn'
+            responses:
+                '204':
+                    description: Habit is ended
+                '400':
+                    description: Habit ID is invalid
+                    $ref: '#/components/responses/BadRequestError'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+    /habits/{habit_id}/history:
+        patch:
+            summary: Updates habit's history
+            tags:
+                - habits
+            parameters:
+                - $ref: '#/components/parameters/SessionIDCookie'
+                - $ref: '#/components/parameters/HabitIDPath'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/HistoryIn'
+            responses:
+                '204':
+                    description: Habit's history is updated
+                '400':
+                    description: Habit ID or body is invalid
+                    $ref: '#/components/responses/BadRequestError'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
+        get:
+            summary: Returns a habit's history
+            tags:
+                - habits
+            parameters:
+                - $ref: '#/components/parameters/SessionIDCookie'
+                - $ref: '#/components/parameters/HabitIDPath'
+            responses:
+                '200':
+                    description: Habit's history is returned
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/HistoryOut'
+                '400':
+                    description: Habit ID is invalid
+                    $ref: '#/components/responses/BadRequestError'
+                '401':
+                    $ref: '#/components/responses/UnauthorizedError'
+                '500':
+                    $ref: '#/components/responses/InternalServerError'
