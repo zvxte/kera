@@ -2,7 +2,7 @@
 
 Fully functional **habit tracker** backend providing an API for managing users, sessions and habits.
 
-Built with Go's standard library and [pgx](https://github.com/jackc/pgx) database driver.
+Built with Go's standard library and PostgreSQL ([pgx](https://github.com/jackc/pgx) driver).
 
 ## Prerequisites
 
