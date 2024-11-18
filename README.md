@@ -7,7 +7,7 @@ Built with Go's standard library and PostgreSQL ([pgx](https://github.com/jackc/
 ## Prerequisites
 
 - [Go](https://go.dev) (developed and tested with Go 1.23)
-- PostgreSQL database
+- [PostgreSQL](https://www.postgresql.org/) database
 
 ## Usage
 
