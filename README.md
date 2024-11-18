@@ -15,7 +15,7 @@ The app requires ADDRESS and DSN (Data Source Name) environment variables.
 
 On Linux:
 ```bash
-cd kera
+cd kera/backend
 export ADDRESS=address:port
 export DSN=postgres://username:password@address:port/database
 go run .
